@@ -3,7 +3,7 @@ namespace ktsu.IconHelper;
 using System.Drawing;
 using System.IO;
 using CommandLine;
-using ktsu.io.Extensions;
+using ktsu.Extensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;

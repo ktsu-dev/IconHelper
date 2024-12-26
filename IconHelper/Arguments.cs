@@ -2,7 +2,8 @@ namespace ktsu.IconHelper;
 
 using CommandLine;
 
-internal class Arguments
+#pragma warning disable CA1812 // Avoid uninstantiated internal classes - this class is instantiated by the CommandLineParser
+internal sealed class Arguments
 {
 	[Option('i', "input", Required = true, HelpText = "The path to the directory containing the input files.")]
 	public string InputPath { get; set; } = string.Empty;

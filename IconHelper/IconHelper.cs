@@ -119,7 +119,17 @@ internal static class IconHelper
 					TransparentColorMode = PngTransparentColorMode.Clear,
 				});
 			}
-			catch (Exception e)
+			catch (ImageProcessingException e)
+			{
+				Console.WriteLine($"Failed to process {file}: {e.Message}");
+				continue;
+			}
+			catch (InvalidImageContentException e)
+			{
+				Console.WriteLine($"Failed to process {file}: {e.Message}");
+				continue;
+			}
+			catch (UnknownImageFormatException e)
 			{
 				Console.WriteLine($"Failed to process {file}: {e.Message}");
 				continue;
@@ -128,6 +138,3 @@ internal static class IconHelper
 		Console.WriteLine($"Done");
 	}
 }
-
-
-

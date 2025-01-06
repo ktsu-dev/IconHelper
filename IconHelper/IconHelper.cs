@@ -17,6 +17,12 @@ internal static class IconHelper
 
 	private static void Run(Arguments args)
 	{
+		if (!args.Validate(out var errors))
+		{
+			Console.WriteLine($"Argument validation failed:\n\t{string.Join("\n\t", errors)}");
+			Environment.Exit(1);
+		}
+
 		var color = ColorTranslator.FromHtml(args.Color);
 		var files = Directory.GetFiles(args.InputPath, "*").ToCollection();
 		foreach (string file in files)
@@ -107,7 +113,13 @@ internal static class IconHelper
 
 				if (newSize > args.Size)
 				{
-					image.Mutate(x => x.Resize(args.Size, args.Size));
+					image.Mutate(x => x.Resize(args.Size - (args.Padding * 2), args.Size - (args.Padding * 2))
+						.Pad(args.Size, args.Size, Rgba32.ParseHex("00000000")));
+				}
+				else
+				{
+					image.Mutate(x => x.Resize(newSize - (args.Padding * 2), newSize - (args.Padding * 2))
+						.Pad(newSize, newSize, Rgba32.ParseHex("00000000")));
 				}
 
 				string outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));

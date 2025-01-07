@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "IconHelper": {
-      "commandName": "Project",
-      "commandLineArgs": "-i \u0022C:\\\\dev\\\\3k\\\\Launcher_Branch\\\\Launcher\\\\IconSource\u0022 -o \u0022C:\\\\dev\\\\3k\\\\Launcher_Branch\\\\Launcher\\\\Icons\u0022 -p 1"
-    }
-  }
-}

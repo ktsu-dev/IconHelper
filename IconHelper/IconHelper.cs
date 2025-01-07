@@ -113,12 +113,14 @@ internal static class IconHelper
 
 				if (newSize > args.Size)
 				{
-					image.Mutate(x => x.Resize(args.Size - (args.Padding * 2), args.Size - (args.Padding * 2))
+					int paddedSize = args.Size - (args.Padding * 2);
+					image.Mutate(x => x.Resize(paddedSize, paddedSize)
 						.Pad(args.Size, args.Size, Rgba32.ParseHex("00000000")));
 				}
 				else
 				{
-					image.Mutate(x => x.Resize(newSize - (args.Padding * 2), newSize - (args.Padding * 2))
+					int paddedSize = newSize - (args.Padding * 2);
+					image.Mutate(x => x.Resize(paddedSize, paddedSize)
 						.Pad(newSize, newSize, Rgba32.ParseHex("00000000")));
 				}
 

@@ -101,6 +101,12 @@ internal static class IconHelper
 				int newSize = Math.Max(minWidth, minHeight);
 				var center = new PointF(left + (minWidth / 2f), top + (minHeight / 2f));
 
+				// We intentionally only shrink the image and not grow it
+				bool shrinkImage = newSize > args.Size;
+				int finalSize = (newSize > args.Size) ? args.Size : newSize;
+				int sizeWithPadding = finalSize - (args.Padding * 2);
+				var paddingColor = Rgba32.ParseHex("00000000");
+
 				image.Mutate(x => x
 					.Crop(new()
 					{
@@ -109,20 +115,9 @@ internal static class IconHelper
 						X = left,
 						Y = top,
 					})
-					.Pad(newSize, newSize, Rgba32.ParseHex("00000000")));
-
-				if (newSize > args.Size)
-				{
-					int paddedSize = args.Size - (args.Padding * 2);
-					image.Mutate(x => x.Resize(paddedSize, paddedSize)
-						.Pad(args.Size, args.Size, Rgba32.ParseHex("00000000")));
-				}
-				else
-				{
-					int paddedSize = newSize - (args.Padding * 2);
-					image.Mutate(x => x.Resize(paddedSize, paddedSize)
-						.Pad(newSize, newSize, Rgba32.ParseHex("00000000")));
-				}
+					.Pad(newSize, newSize, paddingColor)
+					.Resize(sizeWithPadding, sizeWithPadding)
+					.Pad(finalSize, finalSize, paddingColor));
 
 				string outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));
 

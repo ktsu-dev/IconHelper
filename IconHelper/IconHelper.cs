@@ -102,7 +102,6 @@ internal static class IconHelper
 				var center = new PointF(left + (minWidth / 2f), top + (minHeight / 2f));
 
 				// We intentionally only shrink the image and not grow it
-				bool shrinkImage = newSize > args.Size;
 				int finalSize = Math.Min(newSize, args.Size);
 				int finalContentSize = finalSize - (args.Padding * 2);
 				var paddingColor = Rgba32.ParseHex("00000000");

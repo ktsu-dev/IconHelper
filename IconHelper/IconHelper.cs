@@ -17,6 +17,12 @@ internal static class IconHelper
 
 	private static void Run(Arguments args)
 	{
+		if (!args.Validate(out var errors))
+		{
+			Console.WriteLine($"Argument validation failed:\n\t{string.Join("\n\t", errors)}");
+			Environment.Exit(1);
+		}
+
 		var color = ColorTranslator.FromHtml(args.Color);
 		var files = Directory.GetFiles(args.InputPath, "*").ToCollection();
 		foreach (string file in files)
@@ -95,6 +101,11 @@ internal static class IconHelper
 				int newSize = Math.Max(minWidth, minHeight);
 				var center = new PointF(left + (minWidth / 2f), top + (minHeight / 2f));
 
+				// We intentionally only shrink the image and not grow it
+				int finalSize = Math.Min(newSize, args.Size);
+				int finalContentSize = finalSize - (args.Padding * 2);
+				var paddingColor = Rgba32.ParseHex("00000000");
+
 				image.Mutate(x => x
 					.Crop(new()
 					{
@@ -103,12 +114,9 @@ internal static class IconHelper
 						X = left,
 						Y = top,
 					})
-					.Pad(newSize, newSize, Rgba32.ParseHex("00000000")));
-
-				if (newSize > args.Size)
-				{
-					image.Mutate(x => x.Resize(args.Size, args.Size));
-				}
+					.Pad(newSize, newSize, paddingColor)
+					.Resize(finalContentSize, finalContentSize)
+					.Pad(finalSize, finalSize, paddingColor));
 
 				string outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));
 

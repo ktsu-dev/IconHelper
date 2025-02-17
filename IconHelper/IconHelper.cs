@@ -2,12 +2,16 @@ namespace ktsu.IconHelper;
 
 using System.Drawing;
 using System.IO;
+
 using CommandLine;
+
 using ktsu.Extensions;
+
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+
 using PointF = SixLabors.ImageSharp.PointF;
 
 internal static class IconHelper
@@ -143,6 +147,7 @@ internal static class IconHelper
 				continue;
 			}
 		}
+
 		Console.WriteLine($"Done");
 	}
 }

@@ -1,6 +1,7 @@
 namespace ktsu.IconHelper;
 
 using System.Collections.ObjectModel;
+
 using CommandLine;
 
 #pragma warning disable CA1812 // Avoid uninstantiated internal classes - this class is instantiated by the CommandLineParser

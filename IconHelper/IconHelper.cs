@@ -1,3 +1,7 @@
+// Copyright (c) ktsu.dev
+// All rights reserved.
+// Licensed under the MIT license.
+
 namespace ktsu.IconHelper;
 
 using System.Drawing;
@@ -29,7 +33,7 @@ internal static class IconHelper
 
 		var color = ColorTranslator.FromHtml(args.Color);
 		var files = Directory.GetFiles(args.InputPath, "*").ToCollection();
-		foreach (string file in files)
+		foreach (var file in files)
 		{
 			if (file.Contains(".new.png"))
 			{
@@ -41,10 +45,10 @@ internal static class IconHelper
 				Console.WriteLine($"Processing {file}...");
 				var image = Image.Load<Rgba32>(file);
 
-				int top = image.Height;
-				int left = image.Width;
-				int right = 0;
-				int bottom = 0;
+				var top = image.Height;
+				var left = image.Width;
+				var right = 0;
+				var bottom = 0;
 
 				image.Mutate(x => x.BlackWhite());
 
@@ -53,11 +57,11 @@ internal static class IconHelper
 
 				image.ProcessPixelRows(accessor =>
 				{
-					for (int y = 0; y < accessor.Height; y++)
+					for (var y = 0; y < accessor.Height; y++)
 					{
 						var pixelRow = accessor.GetRowSpan(y);
 
-						for (int x = 0; x < pixelRow.Length; x++)
+						for (var x = 0; x < pixelRow.Length; x++)
 						{
 							ref var pixel = ref pixelRow[x];
 							if (pixel.A != 0)
@@ -68,19 +72,19 @@ internal static class IconHelper
 					}
 				});
 
-				bool isBlack = maxValue == 0;
+				var isBlack = maxValue == 0;
 				maxValue = isBlack ? (byte)255 : maxValue;
 
 				image.ProcessPixelRows(accessor =>
 				{
-					for (int y = 0; y < accessor.Height; y++)
+					for (var y = 0; y < accessor.Height; y++)
 					{
 						var pixelRow = accessor.GetRowSpan(y);
 
-						for (int x = 0; x < pixelRow.Length; x++)
+						for (var x = 0; x < pixelRow.Length; x++)
 						{
 							ref var pixel = ref pixelRow[x];
-							byte newValue = (byte)(isBlack ? 255 : 255 - (maxValue - pixel.R));
+							var newValue = (byte)(isBlack ? 255 : 255 - (maxValue - pixel.R));
 							if (pixel.A != 0)
 							{
 								left = Math.Min(left, x);
@@ -100,14 +104,14 @@ internal static class IconHelper
 					}
 				});
 
-				int minWidth = right - left;
-				int minHeight = bottom - top;
-				int newSize = Math.Max(minWidth, minHeight);
+				var minWidth = right - left;
+				var minHeight = bottom - top;
+				var newSize = Math.Max(minWidth, minHeight);
 				var center = new PointF(left + (minWidth / 2f), top + (minHeight / 2f));
 
 				// We intentionally only shrink the image and not grow it
-				int finalSize = Math.Min(newSize, args.Size);
-				int finalContentSize = finalSize - (args.Padding * 2);
+				var finalSize = Math.Min(newSize, args.Size);
+				var finalContentSize = finalSize - (args.Padding * 2);
 				var paddingColor = Rgba32.ParseHex("00000000");
 
 				image.Mutate(x => x
@@ -122,7 +126,7 @@ internal static class IconHelper
 					.Resize(finalContentSize, finalContentSize)
 					.Pad(finalSize, finalSize, paddingColor));
 
-				string outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));
+				var outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));
 
 				image.SaveAsPng(outputFilePath, new()
 				{

@@ -1,3 +1,9 @@
+## v1.2.2 (patch)
+
+Changes since v1.2.1:
+
+- Update README and project file for ktsu.IconHelper ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.2.1 (patch)
 
 Changes since v1.2.0:

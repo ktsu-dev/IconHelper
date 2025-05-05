@@ -1,6 +1,11 @@
+## v1.2.3-pre.3 (prerelease)
+
+Changes since v1.2.3-pre.2:
+
+- Update: - ktsu.CaseConverter to 1.3.1 - ktsu.Extensions to 1.5.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.2.3-pre.2 (prerelease)
 
-Incremental prerelease update.
+Changes since v1.2.3-pre.1:
 ## v1.2.3-pre.1 (prerelease)
 
 Changes since v1.2.2:

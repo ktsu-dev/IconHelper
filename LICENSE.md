@@ -1,6 +1,6 @@
 MIT License
 
-https://github.com/ktsu-dev/ktsu-dev/IconHelper
+https://github.com/ktsu-dev/IconHelper
 
 Copyright (c) 2023-2025 ktsu-dev
 

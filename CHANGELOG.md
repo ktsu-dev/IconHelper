@@ -1,6 +1,6 @@
-## v1.2.3-pre.16 (prerelease)
+## v1.2.3-pre.17 (prerelease)
 
-Changes since v1.2.3-pre.15:
+Changes since v1.2.3-pre.16:
 
 - Review feedback ([@Damon3000s](https://github.com/Damon3000s))
 - Update ktsu.Extensions package reference to version 1.0.31 ([@matt-edmondson](https://github.com/matt-edmondson))

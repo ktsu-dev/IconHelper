@@ -1,3 +1,28 @@
+## v1.2.3-pre.17 (prerelease)
+
+Changes since v1.2.3-pre.16:
+
+- Review feedback ([@Damon3000s](https://github.com/Damon3000s))
+- Update ktsu.Extensions package reference to version 1.0.31 ([@matt-edmondson](https://github.com/matt-edmondson))
+- Delete icon.png ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove Directory.Build.props and Directory.Build.targets files; add copyright headers to IconHelper files; delete unused PowerShell scripts for metadata and version management. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Review feedback ([@Damon3000s](https://github.com/Damon3000s))
+- Add automation scripts for metadata generation and project management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor namespace and package references for consistency; update Azure Pipeline email configuration ([@matt-edmondson](https://github.com/matt-edmondson))
+- Delete accidentally added file ([@Damon3000s](https://github.com/Damon3000s))
+- Review feedback ([@Damon3000s](https://github.com/Damon3000s))
+- Add optional padding to the image ([@Damon3000s](https://github.com/Damon3000s))
+- Add LICENSE template ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update package references for ktsu.CaseConverter and ktsu.Extensions; add ILCompiler and ILLink.Tasks ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update README and project file for ktsu.IconHelper ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove global.json, setup.nsi, and azure-pipelines.yml; rename LICENSE to LICENSE.md ([@matt-edmondson](https://github.com/matt-edmondson))
+- Review feedback ([@Damon3000s](https://github.com/Damon3000s))
+- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+- Apple new editorconfig ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor Arguments class to be sealed and enhance error handling in IconHelper ([@matt-edmondson](https://github.com/matt-edmondson))
+- Initial commit ([@matt-edmondson](https://github.com/matt-edmondson))
+- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.2.3-pre.16 (prerelease)
 
 Changes since v1.2.3-pre.15:

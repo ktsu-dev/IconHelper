@@ -25,15 +25,15 @@ internal static class IconHelper
 
 	private static void Run(Arguments args)
 	{
-		if (!args.Validate(out var errors))
+		if (!args.Validate(out System.Collections.ObjectModel.Collection<string>? errors))
 		{
 			Console.WriteLine($"Argument validation failed:\n\t{string.Join("\n\t", errors)}");
 			Environment.Exit(1);
 		}
 
-		var color = ColorTranslator.FromHtml(args.Color);
-		var files = Directory.GetFiles(args.InputPath, "*").ToCollection();
-		foreach (var file in files)
+		System.Drawing.Color color = ColorTranslator.FromHtml(args.Color);
+		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(args.InputPath, "*").ToCollection();
+		foreach (string? file in files)
 		{
 			if (file.Contains(".new.png"))
 			{
@@ -43,12 +43,12 @@ internal static class IconHelper
 			try
 			{
 				Console.WriteLine($"Processing {file}...");
-				var image = Image.Load<Rgba32>(file);
+				Image<Rgba32> image = Image.Load<Rgba32>(file);
 
-				var top = image.Height;
-				var left = image.Width;
-				var right = 0;
-				var bottom = 0;
+				int top = image.Height;
+				int left = image.Width;
+				int right = 0;
+				int bottom = 0;
 
 				image.Mutate(x => x.BlackWhite());
 
@@ -57,13 +57,13 @@ internal static class IconHelper
 
 				image.ProcessPixelRows(accessor =>
 				{
-					for (var y = 0; y < accessor.Height; y++)
+					for (int y = 0; y < accessor.Height; y++)
 					{
-						var pixelRow = accessor.GetRowSpan(y);
+						Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
 
-						for (var x = 0; x < pixelRow.Length; x++)
+						for (int x = 0; x < pixelRow.Length; x++)
 						{
-							ref var pixel = ref pixelRow[x];
+							ref Rgba32 pixel = ref pixelRow[x];
 							if (pixel.A != 0)
 							{
 								maxValue = Math.Max(maxValue, pixel.R);
@@ -72,19 +72,19 @@ internal static class IconHelper
 					}
 				});
 
-				var isBlack = maxValue == 0;
+				bool isBlack = maxValue == 0;
 				maxValue = isBlack ? (byte)255 : maxValue;
 
 				image.ProcessPixelRows(accessor =>
 				{
-					for (var y = 0; y < accessor.Height; y++)
+					for (int y = 0; y < accessor.Height; y++)
 					{
-						var pixelRow = accessor.GetRowSpan(y);
+						Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
 
-						for (var x = 0; x < pixelRow.Length; x++)
+						for (int x = 0; x < pixelRow.Length; x++)
 						{
-							ref var pixel = ref pixelRow[x];
-							var newValue = (byte)(isBlack ? 255 : 255 - (maxValue - pixel.R));
+							ref Rgba32 pixel = ref pixelRow[x];
+							byte newValue = (byte)(isBlack ? 255 : 255 - (maxValue - pixel.R));
 							if (pixel.A != 0)
 							{
 								left = Math.Min(left, x);
@@ -104,15 +104,15 @@ internal static class IconHelper
 					}
 				});
 
-				var minWidth = right - left;
-				var minHeight = bottom - top;
-				var newSize = Math.Max(minWidth, minHeight);
-				var center = new PointF(left + (minWidth / 2f), top + (minHeight / 2f));
+				int minWidth = right - left;
+				int minHeight = bottom - top;
+				int newSize = Math.Max(minWidth, minHeight);
+				PointF center = new(left + (minWidth / 2f), top + (minHeight / 2f));
 
 				// We intentionally only shrink the image and not grow it
-				var finalSize = Math.Min(newSize, args.Size);
-				var finalContentSize = finalSize - (args.Padding * 2);
-				var paddingColor = Rgba32.ParseHex("00000000");
+				int finalSize = Math.Min(newSize, args.Size);
+				int finalContentSize = finalSize - (args.Padding * 2);
+				Rgba32 paddingColor = Rgba32.ParseHex("00000000");
 
 				image.Mutate(x => x
 					.Crop(new()
@@ -126,7 +126,7 @@ internal static class IconHelper
 					.Resize(finalContentSize, finalContentSize)
 					.Pad(finalSize, finalSize, paddingColor));
 
-				var outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));
+				string outputFilePath = Path.Join(args.OutputPath, Path.GetFileName(file));
 
 				image.SaveAsPng(outputFilePath, new()
 				{

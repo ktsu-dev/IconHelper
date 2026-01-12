@@ -1,5 +1,5 @@
-## v1.2.5 (patch)
+## v1.2.6-pre.1 (prerelease)
 
-Changes since v1.2.4:
+Changes since v1.2.5:
 
-- Remove Polyfill package reference from project file because it is in the sdk now ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump Polyfill from 8.8.0 to 9.7.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))

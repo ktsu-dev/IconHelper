@@ -12,6 +12,8 @@
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="ktsu.CaseConverter" />
     <PackageReference Include="ktsu.Extensions" />
+  <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" />
+  <PackageReference Include="Microsoft.SourceLink.GitHub" />
   <PackageReference Include="Polyfill" VersionOverride="9.7.1" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>

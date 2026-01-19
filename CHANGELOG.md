@@ -3,6 +3,7 @@
 Changes since v1.2.5:
 
 - Bump the microsoft group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Bump Polyfill from 8.8.0 to 9.7.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 ## v1.2.5 (patch)
 

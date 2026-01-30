@@ -1,8 +1,8 @@
-## v1.2.6-pre.6 (prerelease)
+## v1.2.6 (patch)
 
-Changes since v1.2.6-pre.5:
+Changes since v1.2.5:
 
-- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
 ## v1.2.6-pre.6 (prerelease)
 
 Changes since v1.2.6-pre.5:

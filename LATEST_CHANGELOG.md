@@ -1,5 +1,6 @@
-## v1.2.7-pre.8 (prerelease)
+## v1.2.7-pre.9 (prerelease)
 
-Changes since v1.2.7-pre.7:
+Changes since v1.2.7-pre.8:
 
-- Bump MSTest.Sdk from 4.0.2 to 4.1.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))

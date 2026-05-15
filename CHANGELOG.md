@@ -2,6 +2,7 @@
 
 Changes since v1.2.16:
 
+- Bump MSTest.Sdk from 4.2.2 to 4.2.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Bump SixLabors.ImageSharp from 3.1.12 to 4.0.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Bump the microsoft group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

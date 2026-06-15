@@ -2,6 +2,7 @@
 
 Changes since v1.2.16:
 
+- Bump the ktsu group with 8 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 - Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
 - Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
 - Sync .github\workflows\update-sdks.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))

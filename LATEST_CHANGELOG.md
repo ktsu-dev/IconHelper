@@ -1,6 +1,4 @@
-## v1.2.21 (patch)
+## v1.2.21
 
-Changes since v1.2.20:
-
-- Bump MSTest.Sdk from 4.2.3 to 4.3.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+No significant changes detected since v1.2.21.
 

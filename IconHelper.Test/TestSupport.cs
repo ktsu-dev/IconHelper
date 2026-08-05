@@ -11,6 +11,8 @@ using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
+using Color = ktsu.Semantics.Color.Color;
+
 /// <summary>
 /// A scratch directory that deletes itself when the test finishes.
 /// </summary>
@@ -66,17 +68,13 @@ internal static class TestImages
 	}
 
 	/// <summary>
-	/// Parses a <c>#RRGGBB</c> string. Deliberately local rather than using
-	/// <see cref="System.Drawing.ColorTranslator"/> so the tests do not depend on that type
-	/// being available on every platform.
+	/// Parses a colour through the same parser the tool uses, so the gold master exercises the real
+	/// path rather than a test-local reimplementation of it.
 	/// </summary>
-	internal static System.Drawing.Color ParseHexColour(string hex)
+	internal static Color ParseColor(string value)
 	{
-		ReadOnlySpan<char> trimmed = hex.AsSpan().TrimStart('#');
-		int r = int.Parse(trimmed[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-		int g = int.Parse(trimmed.Slice(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-		int b = int.Parse(trimmed.Slice(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-		return System.Drawing.Color.FromArgb(r, g, b);
+		Assert.IsTrue(ColorParser.TryParse(value, out Color color), $"The test asked for an unparseable color: '{value}'.");
+		return color;
 	}
 
 	/// <summary>Finds the brightest opaque pixel, measured by the sum of its colour channels.</summary>

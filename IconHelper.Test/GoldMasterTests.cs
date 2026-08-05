@@ -86,7 +86,7 @@ public class GoldMasterTests
 
 		Assert.IsTrue(args.Validate(out _), "The gold master case itself should use valid arguments.");
 
-		BatchResult result = IconHelper.ProcessDirectory(args, TestImages.ParseHexColour(colour));
+		BatchResult result = IconHelper.ProcessDirectory(args, TestImages.ParseColor(colour));
 		Assert.AreEqual(1, result.Written, "The fixture should have produced exactly one output file.");
 
 		string actualFile = Path.Combine(caseOutput, $"{input}.png");
@@ -114,7 +114,7 @@ public class GoldMasterTests
 	{
 		string[] fixtures = [.. Directory.GetFiles(InputDirectory, "*.png").Select(Path.GetFileNameWithoutExtension)!];
 
-		Assert.AreNotEqual(0, fixtures.Length, "No gold master input fixtures were found.");
+		Assert.IsNotEmpty(fixtures, "No gold master input fixtures were found.");
 
 		string[] unused = [.. fixtures.Where(f => !Cases.Any(c => c.Input == f)).Order()];
 
@@ -142,6 +142,6 @@ public class GoldMasterTests
 	public void TheGoldMasterMatrixIsNotEmpty()
 	{
 		// Guards against the parameterised test silently passing because the case list was emptied.
-		Assert.AreNotEqual(0, Cases.Length);
+		Assert.IsNotEmpty(Cases);
 	}
 }

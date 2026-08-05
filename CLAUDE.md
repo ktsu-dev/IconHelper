@@ -53,7 +53,13 @@ The solution uses:
 - **SixLabors.ImageSharp** - All image decoding, pixel manipulation, and PNG encoding
 - **CommandLineParser** - Attribute-driven CLI argument parsing
 - **ktsu.Extensions** - Used for `ToCollection()` on the file enumeration
-- **Polyfill** - Backfills newer BCL APIs, pinned via `VersionOverride` in the csproj
+- **ktsu.Semantics.Paths** - `AbsoluteDirectoryPath`, `AbsoluteFilePath` and `FileName` for the input
+  and output directories, replacing raw strings and `Path.Join`
+- **ktsu.Semantics.Color** - colour parsing, replacing `System.Drawing.ColorTranslator`
+- **ktsu.Semantics.Strings** - referenced directly only because `SemanticString.Create`, which the
+  path types inherit, lives there and the ktsu analyzer requires direct references
+- **Polyfill** - Backfills newer BCL APIs. Pinned centrally at 11.0.1, which is the floor
+  ktsu.Semantics.Strings requires
 
 ## Architecture
 
@@ -88,6 +94,26 @@ emits a fully transparent square sized by the downscale-only rule against the so
 carries on, returning a `BatchResult` of written and failed counts. The broad catch is deliberate and
 carries a targeted `SuppressMessage` for CA1031 explaining why. Do not narrow it back to specific
 ImageSharp types, that is exactly what used to let a locked or malformed file kill an entire run.
+
+### Semantic types
+
+Paths and colours are semantic types rather than strings.
+
+- `Arguments.TryResolveInput` and `TryResolveOutput` turn the raw option strings into
+  `AbsoluteDirectoryPath`, resolving relative values against the working directory first because the
+  semantic type only accepts absolute paths. `Validate` calls both, so a missing input directory is a
+  clean exit 1 instead of the unhandled `DirectoryNotFoundException` it used to be.
+- Output file paths are composed with the `/` operator, `outputDirectory / FileName.Create(...)`,
+  which also rejects a file name carrying a directory separator.
+- Semantic strings define an implicit conversion to `string`, so pass them straight to BCL APIs
+  rather than calling `ToString()`.
+- `ColorParser.TryParse` accepts a `NamedColors` name or a hex value. `Color` stores **linear**
+  channels as doubles, so `ProcessImage` calls `ToBytes()` once up front rather than per pixel.
+  `FromHex(...).ToBytes()` round-trips byte for byte, which is why swapping the parser left every
+  gold master unchanged.
+
+The named colour set is 13 entries, where `System.Drawing.ColorTranslator` understood roughly 140 CSS
+names. That narrowing is deliberate and pinned by `ColorParserTests.RejectsCssNamesOutsideTheKnownSet`.
 
 ### Exit codes
 

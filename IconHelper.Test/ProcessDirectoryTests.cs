@@ -12,7 +12,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 
-using Color = System.Drawing.Color;
+using ktsu.Semantics.Color;
 
 [TestClass]
 public class ProcessDirectoryTests
@@ -43,7 +43,7 @@ public class ProcessDirectoryTests
 		string output = temp.UncreatedSubdirectory("does-not-exist-yet");
 		Assert.IsFalse(Directory.Exists(output), "Precondition: the output directory must not exist.");
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.IsTrue(Directory.Exists(output), "The output directory should be created automatically.");
 		Assert.AreEqual(1, result.Written);
@@ -63,7 +63,7 @@ public class ProcessDirectoryTests
 			jpeg.SaveAsJpeg(Path.Combine(input, "photo.jpg"));
 		}
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(1, result.Written);
 		Assert.IsTrue(File.Exists(Path.Combine(output, "photo.png")), "A .jpg input should produce a .png output.");
@@ -80,7 +80,7 @@ public class ProcessDirectoryTests
 		WritePng(Path.Combine(input, "keep.png"), 64);
 		WritePng(Path.Combine(input, "already.new.png"), 64);
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(1, result.Written, "Files containing '.new.png' should be skipped.");
 		Assert.IsTrue(File.Exists(Path.Combine(output, "keep.png")));
@@ -97,7 +97,7 @@ public class ProcessDirectoryTests
 		File.WriteAllText(Path.Combine(input, "notes.txt"), "definitely not an image");
 		WritePng(Path.Combine(input, "good.png"), 64);
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(1, result.Written, "The undecodable file should be skipped but the valid one still processed.");
 		Assert.AreEqual(1, result.Failed, "The undecodable file should be counted as a failure.");
@@ -121,7 +121,7 @@ public class ProcessDirectoryTests
 
 		using (FileStream hold = new(locked, FileMode.Open, FileAccess.Read, FileShare.None))
 		{
-			BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+			BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 			Assert.AreEqual(1, result.Written, "The valid icon should still be written.");
 			Assert.AreEqual(1, result.Failed, "The locked file should be counted as a failure.");
@@ -189,7 +189,7 @@ public class ProcessDirectoryTests
 		Directory.CreateDirectory(input);
 		WritePng(Path.Combine(input, "icon.png"), 64);
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(1, result.Written);
 		Assert.AreEqual(0, result.Failed);
@@ -214,7 +214,7 @@ public class ProcessDirectoryTests
 
 		WritePng(Path.Combine(input, "z-good.png"), 64);
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(2, result.Written, "Both the blank file and the valid icon should be written.");
 		Assert.IsTrue(
@@ -234,7 +234,7 @@ public class ProcessDirectoryTests
 		string output = temp.Combine("out");
 		Directory.CreateDirectory(input);
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(0, result.Written);
 	}
@@ -251,7 +251,7 @@ public class ProcessDirectoryTests
 			WritePng(Path.Combine(input, $"icon{i}.png"), 64);
 		}
 
-		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(4, result.Written);
 		Assert.AreEqual(4, Directory.GetFiles(output).Length);
@@ -266,7 +266,7 @@ public class ProcessDirectoryTests
 		Directory.CreateDirectory(input);
 		WritePng(Path.Combine(input, "icon.png"), 64);
 
-		IconHelper.ProcessDirectory(ArgumentsFor(input, output), Color.White);
+		IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		using Image written = Image.Load(Path.Combine(output, "icon.png"));
 		PngMetadata png = written.Metadata.GetPngMetadata();

@@ -6,18 +6,20 @@ namespace ktsu.IconHelper;
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 
 using CommandLine;
 
 using ktsu.Extensions;
+using ktsu.Semantics.Paths;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+
+using Color = ktsu.Semantics.Color.Color;
 
 internal static class IconHelper
 {
@@ -70,7 +72,8 @@ internal static class IconHelper
 			Environment.Exit(ExitInvalidArguments);
 		}
 
-		System.Drawing.Color color = ColorTranslator.FromHtml(args.Color);
+		// Validate already proved this parses, so the result is not worth re-checking.
+		_ = ColorParser.TryParse(args.Color, out Color color);
 		BatchResult result = ProcessDirectory(args, color);
 
 		Console.WriteLine(result.Failed == 0
@@ -93,13 +96,26 @@ internal static class IconHelper
 		"Design",
 		"CA1031:Do not catch general exception types",
 		Justification = "This is a batch tool. Any failure on one file must be reported and skipped rather than abandoning the remaining files, and the failure is surfaced to the console and in the returned BatchResult.")]
-	internal static BatchResult ProcessDirectory(Arguments args, System.Drawing.Color color)
+	internal static BatchResult ProcessDirectory(Arguments args, Color color)
 	{
-		Directory.CreateDirectory(args.OutputPath);
+		Ensure.NotNull(args);
+
+		// Validate resolves these too, so a failure here means the caller skipped validation.
+		if (!args.TryResolveInput(out AbsoluteDirectoryPath? inputDirectory, out string? inputError))
+		{
+			throw new ArgumentException(inputError, nameof(args));
+		}
+
+		if (!args.TryResolveOutput(out AbsoluteDirectoryPath? outputDirectory, out string? outputError))
+		{
+			throw new ArgumentException(outputError, nameof(args));
+		}
+
+		Directory.CreateDirectory(outputDirectory);
 
 		int processed = 0;
 		int failed = 0;
-		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(args.InputPath, "*").ToCollection();
+		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(inputDirectory, "*").ToCollection();
 		foreach (string? file in files)
 		{
 			if (file.Contains(".new.png"))
@@ -114,8 +130,11 @@ internal static class IconHelper
 
 				ProcessImage(image, color, args.Size, args.Padding);
 
-				// Always write a .png extension, since the encoder always writes PNG data
-				string outputFilePath = Path.Join(args.OutputPath, $"{Path.GetFileNameWithoutExtension(file)}.png");
+				// Always write a .png extension, since the encoder always writes PNG data. FileName
+				// rejects anything carrying a directory separator, and the / operator composes the
+				// two into an absolute file path.
+				FileName outputFileName = FileName.Create<FileName>($"{Path.GetFileNameWithoutExtension(file)}.png");
+				AbsoluteFilePath outputFilePath = outputDirectory / outputFileName;
 
 				image.SaveAsPng(outputFilePath, Encoder);
 				processed++;
@@ -128,7 +147,6 @@ internal static class IconHelper
 				// icon, not the whole run, so the type name is included to keep it diagnosable.
 				Console.WriteLine($"Failed to process {file}: {e.GetType().Name}: {e.Message}");
 				failed++;
-				continue;
 			}
 		}
 
@@ -140,12 +158,13 @@ internal static class IconHelper
 	/// centres it on a square canvas and scales it down to at most <paramref name="size"/> pixels.
 	/// The image is mutated in place.
 	/// </summary>
-	internal static void ProcessImage(Image<Rgba32> image, System.Drawing.Color color, int size, int padding)
+	internal static void ProcessImage(Image<Rgba32> image, Color color, int size, int padding)
 	{
-		int top = image.Height;
-		int left = image.Width;
-		int right = 0;
-		int bottom = 0;
+		Ensure.NotNull(image);
+
+		// The semantic Color stores linear channels as doubles. Encode to sRGB bytes once here rather
+		// than per pixel, both for speed and so the tint below stays plain byte arithmetic.
+		(byte colorR, byte colorG, byte colorB, byte _) = color.ToBytes();
 
 		// RECOLOURING ALGORITHM
 		//
@@ -176,10 +195,37 @@ internal static class IconHelper
 		// calculation below), which is why it ignores them.
 		image.Mutate(x => x.BlackWhite());
 
-		// Find the highest tonal value among the *opaque* pixels. Transparent pixels are
-		// excluded because their colour channels are meaningless. Many encoders leave
-		// arbitrary garbage in the RGB of a fully transparent pixel, which would otherwise
-		// skew this maximum.
+		byte maxValue = FindBrightestOpaqueValue(image);
+
+		// Handle the all-black glyph case. A maxValue of 0 means every opaque pixel is pure
+		// black, a solid silhouette carrying its shape entirely in the alpha channel.
+		// The isBlack flag forces those pixels to full intensity in the pass below so the
+		// glyph takes the target colour. Without it the normalization would resolve to
+		// intensity 0 and the icon would come out invisible.
+		bool isBlack = maxValue == 0;
+
+		PixelBounds bounds = TintAndMeasureBounds(image, maxValue, isBlack, colorR, colorG, colorB);
+
+		if (bounds.IsEmpty)
+		{
+			// No artwork to crop around, so emit an empty square rather than trying to measure one.
+			// The side comes from the source canvas so the downscale-only rule still applies, and
+			// every pixel is already rgba(0,0,0,0) by now, so resizing keeps it fully transparent.
+			int blankSize = Math.Min(Math.Max(image.Width, image.Height), size);
+			image.Mutate(x => x.Resize(blankSize, blankSize));
+			return;
+		}
+
+		CropSquareAndResize(image, bounds, size, padding);
+	}
+
+	/// <summary>
+	/// Finds the highest tonal value among the *opaque* pixels. Transparent pixels are excluded
+	/// because their colour channels are meaningless. Many encoders leave arbitrary garbage in the
+	/// RGB of a fully transparent pixel, which would otherwise skew this maximum.
+	/// </summary>
+	private static byte FindBrightestOpaqueValue(Image<Rgba32> image)
+	{
 		byte maxValue = 0;
 
 		image.ProcessPixelRows(accessor =>
@@ -199,16 +245,29 @@ internal static class IconHelper
 			}
 		});
 
-		// Handle the all-black glyph case. A maxValue of 0 means every opaque pixel is pure
-		// black, a solid silhouette carrying its shape entirely in the alpha channel.
-		// The isBlack flag forces those pixels to full intensity in the pass below so the
-		// glyph takes the target colour. Without it the normalization would resolve to
-		// intensity 0 and the icon would come out invisible.
-		bool isBlack = maxValue == 0;
+		return maxValue;
+	}
 
-		// Normalize the brightness and multiply through by the target colour. This pass also
-		// accumulates the bounding box of the visible artwork, since it is already walking
-		// every pixel, and the crop below uses it to trim transparent margins.
+	/// <summary>
+	/// Normalizes the brightness and multiplies through by the target colour, returning the bounding
+	/// box of the visible artwork. The two are done in one pass because it is already walking every
+	/// pixel, and the crop needs those bounds to trim the transparent margins.
+	/// </summary>
+	private static PixelBounds TintAndMeasureBounds(
+		Image<Rgba32> image,
+		byte maxValue,
+		bool isBlack,
+		byte colorR,
+		byte colorG,
+		byte colorB)
+	{
+		// Seeded inverted, so an image with nothing opaque in it leaves them that way and reports
+		// itself as empty.
+		int top = image.Height;
+		int left = image.Width;
+		int right = 0;
+		int bottom = 0;
+
 		image.ProcessPixelRows(accessor =>
 		{
 			for (int y = 0; y < accessor.Height; y++)
@@ -247,30 +306,24 @@ internal static class IconHelper
 					// yields the colour exactly, intermediate values yield proportionally
 					// darker shades of it, which is what keeps edges anti-aliased. Alpha is
 					// deliberately left alone so the original transparency is preserved.
-					pixel.R = (byte)(newValue / 255f * color.R);
-					pixel.G = (byte)(newValue / 255f * color.G);
-					pixel.B = (byte)(newValue / 255f * color.B);
+					pixel.R = (byte)(newValue / 255f * colorR);
+					pixel.G = (byte)(newValue / 255f * colorG);
+					pixel.B = (byte)(newValue / 255f * colorB);
 				}
 			}
 		});
 
-		// Nothing opaque was found, so the bounds were never updated and are still inverted. There is
-		// no artwork to crop around, so emit an empty square instead of trying to measure one. The
-		// side is taken from the source canvas so the downscale-only rule still applies. Every pixel
-		// is already rgba(0,0,0,0) at this point, so resizing keeps the result fully transparent.
-		if (right < left || bottom < top)
-		{
-			int blankSize = Math.Min(Math.Max(image.Width, image.Height), size);
-			image.Mutate(x => x.Resize(blankSize, blankSize));
-			return;
-		}
+		return new PixelBounds(left, top, right, bottom);
+	}
 
-		// `right` and `bottom` are the inclusive indices of the last opaque pixel, so the span they
-		// describe is one wider and one taller than the difference between the bounds. Without the
-		// +1 the crop drops the rightmost column and bottom row of every icon.
-		int minWidth = right - left + 1;
-		int minHeight = bottom - top + 1;
-		int newSize = Math.Max(minWidth, minHeight);
+	/// <summary>
+	/// Crops to the artwork, squares it off, and scales it down to at most
+	/// <paramref name="size"/> pixels, insetting the content by <paramref name="padding"/> per side
+	/// without changing the final canvas size.
+	/// </summary>
+	private static void CropSquareAndResize(Image<Rgba32> image, PixelBounds bounds, int size, int padding)
+	{
+		int newSize = Math.Max(bounds.Width, bounds.Height);
 
 		// We intentionally only shrink the image and not grow it
 		int finalSize = Math.Min(newSize, size);
@@ -280,10 +333,10 @@ internal static class IconHelper
 		image.Mutate(x => x
 			.Crop(new()
 			{
-				Width = minWidth,
-				Height = minHeight,
-				X = left,
-				Y = top,
+				Width = bounds.Width,
+				Height = bounds.Height,
+				X = bounds.Left,
+				Y = bounds.Top,
 			})
 			.Pad(newSize, newSize, paddingColor)
 			.Resize(finalContentSize, finalContentSize)

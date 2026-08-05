@@ -50,13 +50,13 @@ jobs:
 
     steps:
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: 17
           distribution: "zulu" # Alternative distribution options are available.
 
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Full history for versioning
           fetch-tags: true
@@ -65,11 +65,20 @@ jobs:
           persist-credentials: true
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          # setup-dotnet caches the NuGet global packages folder and keys it on a hash of these
+          # files. The csproj files alone are not enough: this repository uses central package
+          # management, so Directory.Packages.props is where versions actually live, and global.json
+          # pins the ktsu SDK versions, which are NuGet packages too. Without them a version bump in
+          # either file reuses the previous key, and because a cache hit never re-saves, the newly
+          # downloaded packages would never make it into the cache.
           cache: true
-          cache-dependency-path: "**/*.csproj"
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
 
       # Ensure NuGet packages directory exists for caching (prevents error when pipeline exits early)
       - name: Ensure NuGet cache directory exists
@@ -78,7 +87,7 @@ jobs:
 
       - name: Cache SonarQube Cloud packages
         if: ${{ env.SONAR_TOKEN != '' }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -89,7 +98,7 @@ jobs:
       - name: Cache SonarQube Cloud scanner
         if: ${{ env.SONAR_TOKEN != '' }}
         id: cache-sonar-scanner
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -196,7 +205,7 @@ jobs:
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-report
@@ -216,13 +225,13 @@ jobs:
 
     steps:
       - name: Checkout Release Commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.build.outputs.release_hash }}
           fetch-depth: 0 # Full history for better auto-detection
 
       - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
 
@@ -253,7 +262,7 @@ jobs:
           dotnet run --project "${{ runner.temp }}/KtsuBuild/KtsuBuild.CLI" -- winget generate --version "${{ needs.build.outputs.version }}" --workspace "${{ github.workspace }}" --verbose
 
       - name: Upload Updated Manifests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: winget-manifests-${{ needs.build.outputs.version }}
           path: winget/*.yaml
@@ -271,9 +280,12 @@ jobs:
 
     steps:
       - name: Checkout Release Commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.build.outputs.release_hash }}
 
+      # Pinned to a full commit SHA rather than a tag. Tags are mutable, so a third party action
+      # referenced by tag can be repointed at different code after review. The trailing comment is
+      # the convention dependabot reads, so it still offers upgrades and rewrites both parts.
       - name: Detect Dependencies
-        uses: advanced-security/component-detection-dependency-submission-action@v0.0.2
+        uses: advanced-security/component-detection-dependency-submission-action@31f25a8de68ae5ce2ca274bc28546a78683c15ce # v0.1.4

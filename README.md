@@ -127,24 +127,100 @@ Done. 2 file(s) written, 1 failed.
 
 ## How It Works
 
-Each file is processed through the following pipeline:
+The whole design follows from one goal: reduce artwork of unknown origin to a single-colour
+silhouette without destroying the anti-aliased edges that make an icon look smooth at small sizes.
+A naive approach, thresholding to pure black and white and painting the result, produces jagged
+icons. Each stage below exists to avoid that.
 
-1. **Load** the image as RGBA32. Any file that cannot be read or decoded is reported and skipped.
-2. **Desaturate** using ImageSharp's black-and-white filter, reducing the image to a silhouette.
-3. **Measure** the brightest opaque pixel. If every opaque pixel is black, the silhouette is treated
-   as fully opaque instead. This is what allows solid black glyphs to be recoloured.
-4. **Tint** each pixel by scaling the requested colour by that pixel's normalized brightness.
-   Fully transparent pixels are zeroed so they do not bleed colour into the edges.
-5. **Trim** to the bounding box of the non-transparent pixels.
-6. **Square** the result by padding the shorter axis with transparency.
-7. **Resize** to `min(trimmedSize, --size)`, then inset by `--padding` pixels per side and pad back
-   out to the final canvas size.
-8. **Save** as an 8-bit RGBA PNG in the output directory, reusing the input file's base name with a
-   `.png` extension. The output directory is created if it does not already exist.
+### 1. Flatten to a single tonal channel
 
-An image with no visible pixels has no artwork to measure, so steps 5 to 7 are skipped and a fully
-transparent square is written instead, sized by the same downscale-only rule applied to the source
-canvas.
+The image is loaded as RGBA32 and put through ImageSharp's `BlackWhite` filter. That filter is a
+colour matrix whose red, green and blue rows are all `1.5`, with a `-1` offset row and the alpha row
+left at `1`. In normalized 0 to 1 terms every output channel becomes the same value:
+
+```
+out = clamp01(1.5 * (R + G + B) - 1)
+```
+
+Because all three outputs are identical the image collapses to one tonal channel, which is why every
+later step reads the red channel alone and treats it as intensity.
+
+For a pixel that is already grey with value `v` this reduces to `4.5v - 1`, a steep ramp that clamps
+to black at `v <= 2/9` and to white at `v >= 4/9`. The result is deliberately *near* binary rather
+than binary: most pixels land on pure black or pure white, and only a narrow band along
+anti-aliased edges keeps genuine midtones. **Those midtones are the anti-aliasing**, and preserving
+them is the reason for everything that follows.
+
+Alpha passes through untouched.
+
+### 2. Measure the brightest opaque pixel
+
+A first pass records the highest tonal value across pixels whose alpha is not zero.
+
+Transparent pixels are excluded deliberately. The colour matrix has no alpha awareness, so it
+rewrites the colour channels of fully transparent pixels too, and many encoders leave arbitrary
+values in the RGB of a transparent pixel to begin with. Including them would skew the maximum
+against artwork that is mostly empty canvas, which most icons are.
+
+This has to be a separate pass, because the tint in stage 3 cannot start until the maximum for the
+whole image is known.
+
+### 3. Normalize, then tint
+
+A second pass lifts each pixel to full intensity and multiplies through by the target colour:
+
+```
+intensity = 255 - (maxValue - red)        // opaque pixels
+intensity = 0                             // transparent pixels
+channel   = intensity / 255 * targetChannel
+```
+
+The normalization is an **offset rather than a scale**, and that choice matters. Adding
+`255 - maxValue` to every pixel raises the brightest opaque pixel to exactly 255 while preserving
+the absolute differences between neighbouring tones. Scaling instead would stretch those differences
+apart and visibly harden the anti-aliased edge. Artwork whose brightest pixel is already 255, which
+is most of it after stage 1, passes through unchanged.
+
+Two details are load bearing:
+
+- **All-black artwork is special-cased.** If the brightest opaque pixel is still 0, the glyph is a
+  solid black silhouette carrying its shape entirely in the alpha channel. Those pixels are forced
+  to full intensity, because normalizing them would resolve to intensity 0 and the icon would come
+  out invisible.
+- **Transparent pixels have their colour zeroed.** Whatever RGB the decoder left behind would
+  otherwise be blended outward by the resize in stage 5, producing a dark or off-colour halo around
+  the icon.
+
+Alpha is never modified, so the original transparency survives to the output.
+
+### 4. Trim and square
+
+The same pass that tints also accumulates the bounding box of the non-transparent pixels, since it
+is already visiting every pixel. The image is cropped to that box, which discards whatever empty
+margin the source had, then padded with transparency on the shorter axis to make it square. Padding
+rather than stretching keeps the artwork's aspect ratio intact and centres it.
+
+The bounds are inclusive indices, so the width is `right - left + 1`. Dropping that `+ 1` costs the
+rightmost column and bottom row of every icon.
+
+### 5. Resize, pad, and save
+
+The final side is `min(squareSize, --size)`. The minimum is what makes this **downscale only**:
+enlarging a small icon would just interpolate detail that was never there, so a `--size` larger than
+the artwork leaves it alone.
+
+`--padding` insets the content without changing the canvas. The artwork is resized to
+`finalSize - padding * 2` and then padded back out to `finalSize`, so the output is always
+`finalSize` square whatever the padding.
+
+The result is written as an 8-bit RGBA PNG, with the encoder set to clear the colour channels of
+fully transparent pixels so no invisible colour data is carried into the file.
+
+### Edge cases
+
+An image with no visible pixels has no bounding box to measure, so stages 4 and 5 are skipped and a
+fully transparent square is written instead, sized by the same downscale-only rule applied to the
+source canvas.
 
 Files whose names contain `.new.png` are skipped, so re-running the tool over a directory that
 already contains its own output will not reprocess those files.

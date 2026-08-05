@@ -84,8 +84,8 @@ public class ColorParserTests
 	public void KnownNamesAreListedForErrorMessages()
 	{
 		// The keys are stored lower case, and lookup is case insensitive.
-		StringAssert.Contains(ColorParser.KnownNames, "white");
-		StringAssert.Contains(ColorParser.KnownNames, "black");
-		StringAssert.Contains(ColorParser.KnownNames, "transparent");
+		Assert.Contains("white", ColorParser.KnownNames);
+		Assert.Contains("black", ColorParser.KnownNames);
+		Assert.Contains("transparent", ColorParser.KnownNames);
 	}
 }

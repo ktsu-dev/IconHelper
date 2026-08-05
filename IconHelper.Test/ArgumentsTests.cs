@@ -47,7 +47,7 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsTrue(valid, $"Expected valid arguments but got: {string.Join(", ", errors)}");
-		Assert.AreEqual(0, errors.Count);
+		Assert.IsEmpty(errors);
 	}
 
 	[TestMethod]
@@ -61,7 +61,7 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsTrue(valid, "Padding of 31 is below half of 64 and should be accepted.");
-		Assert.AreEqual(0, errors.Count);
+		Assert.IsEmpty(errors);
 	}
 
 	[TestMethod]
@@ -75,7 +75,7 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid, "Padding equal to half the size leaves no content and should be rejected.");
-		Assert.AreEqual(1, errors.Count);
+		Assert.HasCount(1, errors);
 		Assert.AreEqual("Padding must be less than half the size of the image.", errors[0]);
 	}
 
@@ -106,8 +106,8 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid, "A missing input directory should be caught by validation, not at enumeration time.");
-		Assert.AreEqual(1, errors.Count);
-		StringAssert.Contains(errors[0], "--input directory does not exist");
+		Assert.HasCount(1, errors);
+		Assert.Contains("--input directory does not exist", errors[0]);
 	}
 
 	[TestMethod]
@@ -122,8 +122,8 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid);
-		Assert.AreEqual(1, errors.Count);
-		StringAssert.Contains(errors[0], "--input is a file, not a directory");
+		Assert.HasCount(1, errors);
+		Assert.Contains("--input is a file, not a directory", errors[0]);
 	}
 
 	[TestMethod]
@@ -138,8 +138,8 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid);
-		Assert.AreEqual(1, errors.Count);
-		StringAssert.Contains(errors[0], "--output is a file, not a directory");
+		Assert.HasCount(1, errors);
+		Assert.Contains("--output is a file, not a directory", errors[0]);
 	}
 
 	[TestMethod]
@@ -160,7 +160,7 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid);
-		Assert.AreEqual(2, errors.Count, $"Both paths should be reported: {string.Join(", ", errors)}");
+		Assert.HasCount(2, errors, $"Both paths should be reported: {string.Join(", ", errors)}");
 	}
 
 	[TestMethod]
@@ -173,8 +173,8 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid);
-		Assert.AreEqual(1, errors.Count);
-		StringAssert.Contains(errors[0], "is not a color");
+		Assert.HasCount(1, errors);
+		Assert.Contains("is not a color", errors[0]);
 	}
 
 	[TestMethod]
@@ -190,7 +190,7 @@ public class ArgumentsTests
 		bool valid = args.Validate(out Collection<string> errors);
 
 		Assert.IsFalse(valid);
-		Assert.AreEqual(3, errors.Count, $"Expected padding, input and color errors but got: {string.Join(", ", errors)}");
+		Assert.HasCount(3, errors, $"Expected padding, input and color errors but got: {string.Join(", ", errors)}");
 	}
 
 	[TestMethod]

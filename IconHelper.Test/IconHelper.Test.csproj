@@ -1,0 +1,23 @@
+<Project>
+  <Sdk Name="MSTest.Sdk" />
+  <Sdk Name="ktsu.Sdk" />
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks></TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IconHelper\IconHelper.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="GoldMaster\Input\*.png" CopyToOutputDirectory="PreserveNewest" LinkBase="GoldMaster\Input" />
+    <Content Include="GoldMaster\Expected\*.png" CopyToOutputDirectory="PreserveNewest" LinkBase="GoldMaster\Expected" />
+  </ItemGroup>
+</Project>

@@ -1,1 +1,1 @@
-icon helper;icon loading;icon conversion;ico;png;svg;icon manipulation;color manipulation;multi resolution;graphics;dotnet;csharp
+.NET;C#;dotnet;csharp;icon;icons;icon processing;image processing;batch processing;cli;command line;tool;recolor;tint;silhouette;crop;trim;resize;padding;png;transparency;alpha;imagesharp;sixlabors;graphics

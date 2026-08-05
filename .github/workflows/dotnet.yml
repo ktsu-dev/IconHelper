@@ -284,5 +284,8 @@ jobs:
         with:
           ref: ${{ needs.build.outputs.release_hash }}
 
+      # Pinned to a full commit SHA rather than a tag. Tags are mutable, so a third party action
+      # referenced by tag can be repointed at different code after review. The trailing comment is
+      # the convention dependabot reads, so it still offers upgrades and rewrites both parts.
       - name: Detect Dependencies
-        uses: advanced-security/component-detection-dependency-submission-action@v0.1.4
+        uses: advanced-security/component-detection-dependency-submission-action@31f25a8de68ae5ce2ca274bc28546a78683c15ce # v0.1.4

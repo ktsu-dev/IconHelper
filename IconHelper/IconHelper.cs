@@ -147,7 +147,6 @@ internal static class IconHelper
 				// icon, not the whole run, so the type name is included to keep it diagnosable.
 				Console.WriteLine($"Failed to process {file}: {e.GetType().Name}: {e.Message}");
 				failed++;
-				continue;
 			}
 		}
 
@@ -166,11 +165,6 @@ internal static class IconHelper
 		// The semantic Color stores linear channels as doubles. Encode to sRGB bytes once here rather
 		// than per pixel, both for speed and so the tint below stays plain byte arithmetic.
 		(byte colorR, byte colorG, byte colorB, byte _) = color.ToBytes();
-
-		int top = image.Height;
-		int left = image.Width;
-		int right = 0;
-		int bottom = 0;
 
 		// RECOLOURING ALGORITHM
 		//
@@ -201,10 +195,37 @@ internal static class IconHelper
 		// calculation below), which is why it ignores them.
 		image.Mutate(x => x.BlackWhite());
 
-		// Find the highest tonal value among the *opaque* pixels. Transparent pixels are
-		// excluded because their colour channels are meaningless. Many encoders leave
-		// arbitrary garbage in the RGB of a fully transparent pixel, which would otherwise
-		// skew this maximum.
+		byte maxValue = FindBrightestOpaqueValue(image);
+
+		// Handle the all-black glyph case. A maxValue of 0 means every opaque pixel is pure
+		// black, a solid silhouette carrying its shape entirely in the alpha channel.
+		// The isBlack flag forces those pixels to full intensity in the pass below so the
+		// glyph takes the target colour. Without it the normalization would resolve to
+		// intensity 0 and the icon would come out invisible.
+		bool isBlack = maxValue == 0;
+
+		PixelBounds bounds = TintAndMeasureBounds(image, maxValue, isBlack, colorR, colorG, colorB);
+
+		if (bounds.IsEmpty)
+		{
+			// No artwork to crop around, so emit an empty square rather than trying to measure one.
+			// The side comes from the source canvas so the downscale-only rule still applies, and
+			// every pixel is already rgba(0,0,0,0) by now, so resizing keeps it fully transparent.
+			int blankSize = Math.Min(Math.Max(image.Width, image.Height), size);
+			image.Mutate(x => x.Resize(blankSize, blankSize));
+			return;
+		}
+
+		CropSquareAndResize(image, bounds, size, padding);
+	}
+
+	/// <summary>
+	/// Finds the highest tonal value among the *opaque* pixels. Transparent pixels are excluded
+	/// because their colour channels are meaningless. Many encoders leave arbitrary garbage in the
+	/// RGB of a fully transparent pixel, which would otherwise skew this maximum.
+	/// </summary>
+	private static byte FindBrightestOpaqueValue(Image<Rgba32> image)
+	{
 		byte maxValue = 0;
 
 		image.ProcessPixelRows(accessor =>
@@ -224,16 +245,29 @@ internal static class IconHelper
 			}
 		});
 
-		// Handle the all-black glyph case. A maxValue of 0 means every opaque pixel is pure
-		// black, a solid silhouette carrying its shape entirely in the alpha channel.
-		// The isBlack flag forces those pixels to full intensity in the pass below so the
-		// glyph takes the target colour. Without it the normalization would resolve to
-		// intensity 0 and the icon would come out invisible.
-		bool isBlack = maxValue == 0;
+		return maxValue;
+	}
 
-		// Normalize the brightness and multiply through by the target colour. This pass also
-		// accumulates the bounding box of the visible artwork, since it is already walking
-		// every pixel, and the crop below uses it to trim transparent margins.
+	/// <summary>
+	/// Normalizes the brightness and multiplies through by the target colour, returning the bounding
+	/// box of the visible artwork. The two are done in one pass because it is already walking every
+	/// pixel, and the crop needs those bounds to trim the transparent margins.
+	/// </summary>
+	private static PixelBounds TintAndMeasureBounds(
+		Image<Rgba32> image,
+		byte maxValue,
+		bool isBlack,
+		byte colorR,
+		byte colorG,
+		byte colorB)
+	{
+		// Seeded inverted, so an image with nothing opaque in it leaves them that way and reports
+		// itself as empty.
+		int top = image.Height;
+		int left = image.Width;
+		int right = 0;
+		int bottom = 0;
+
 		image.ProcessPixelRows(accessor =>
 		{
 			for (int y = 0; y < accessor.Height; y++)
@@ -279,23 +313,17 @@ internal static class IconHelper
 			}
 		});
 
-		// Nothing opaque was found, so the bounds were never updated and are still inverted. There is
-		// no artwork to crop around, so emit an empty square instead of trying to measure one. The
-		// side is taken from the source canvas so the downscale-only rule still applies. Every pixel
-		// is already rgba(0,0,0,0) at this point, so resizing keeps the result fully transparent.
-		if (right < left || bottom < top)
-		{
-			int blankSize = Math.Min(Math.Max(image.Width, image.Height), size);
-			image.Mutate(x => x.Resize(blankSize, blankSize));
-			return;
-		}
+		return new PixelBounds(left, top, right, bottom);
+	}
 
-		// `right` and `bottom` are the inclusive indices of the last opaque pixel, so the span they
-		// describe is one wider and one taller than the difference between the bounds. Without the
-		// +1 the crop drops the rightmost column and bottom row of every icon.
-		int minWidth = right - left + 1;
-		int minHeight = bottom - top + 1;
-		int newSize = Math.Max(minWidth, minHeight);
+	/// <summary>
+	/// Crops to the artwork, squares it off, and scales it down to at most
+	/// <paramref name="size"/> pixels, insetting the content by <paramref name="padding"/> per side
+	/// without changing the final canvas size.
+	/// </summary>
+	private static void CropSquareAndResize(Image<Rgba32> image, PixelBounds bounds, int size, int padding)
+	{
+		int newSize = Math.Max(bounds.Width, bounds.Height);
 
 		// We intentionally only shrink the image and not grow it
 		int finalSize = Math.Min(newSize, size);
@@ -305,10 +333,10 @@ internal static class IconHelper
 		image.Mutate(x => x
 			.Crop(new()
 			{
-				Width = minWidth,
-				Height = minHeight,
-				X = left,
-				Y = top,
+				Width = bounds.Width,
+				Height = bounds.Height,
+				X = bounds.Left,
+				Y = bounds.Top,
 			})
 			.Pad(newSize, newSize, paddingColor)
 			.Resize(finalContentSize, finalContentSize)

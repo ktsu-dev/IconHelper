@@ -1,6 +1,6 @@
-## v1.4.1 (patch)
+## v1.4.2 (patch)
 
-Changes since v1.4.0:
+Changes since v1.4.1:
 
-- [patch] Explain the algorithm and its rationale in the README ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

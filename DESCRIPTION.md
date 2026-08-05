@@ -1,1 +1,1 @@
-IconHelper
+A .NET command-line tool for batch-normalizing icon images into a consistent set. Recolours each image to a single-colour silhouette, trims transparent margins, centres the artwork on a square canvas, and resizes it to a maximum dimension with optional padding. Built on ImageSharp with no native dependencies, making it a fast way to unify icon packs collected from different sources.

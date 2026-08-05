@@ -1,199 +1,179 @@
 # ktsu.IconHelper
 
-> A utility library for working with icons and images in .NET applications.
+> A .NET command-line tool that batch-normalizes icon images by recoloring, trimming, squaring, and resizing them into consistent PNGs.
 
-[![License](https://img.shields.io/github/license/ktsu-dev/IconHelper)](https://github.com/ktsu-dev/IconHelper/blob/main/LICENSE.md)
-[![NuGet](https://img.shields.io/nuget/v/ktsu.IconHelper.svg)](https://www.nuget.org/packages/ktsu.IconHelper/)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.IconHelper.svg)](https://www.nuget.org/packages/ktsu.IconHelper/)
-[![Build Status](https://github.com/ktsu-dev/IconHelper/workflows/build/badge.svg)](https://github.com/ktsu-dev/IconHelper/actions)
-[![GitHub Stars](https://img.shields.io/github/stars/ktsu-dev/IconHelper?style=social)](https://github.com/ktsu-dev/IconHelper/stargazers)
+[![License](https://img.shields.io/github/license/ktsu-dev/IconHelper.svg?label=License&logo=github)](LICENSE.md)
+[![GitHub release](https://img.shields.io/github/v/release/ktsu-dev/IconHelper?label=Release&logo=github)](https://github.com/ktsu-dev/IconHelper/releases)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/IconHelper?label=Commits&logo=github)](https://github.com/ktsu-dev/IconHelper/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/IconHelper?label=Contributors&logo=github)](https://github.com/ktsu-dev/IconHelper/graphs/contributors)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/IconHelper/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/IconHelper/actions)
 
 ## Introduction
 
-IconHelper is a .NET library designed to simplify working with icons and images across different platforms and frameworks. It provides utilities for loading, manipulating, and converting icons between various formats, making it easier to manage application visual assets.
+`ktsu.IconHelper` is a small console application for preparing icon sets. Icon packs downloaded from
+different sources rarely agree on colour, padding, or canvas size, which makes them look inconsistent
+when placed side by side in a UI. IconHelper takes a directory of images, converts each one to a
+monochrome silhouette tinted with a colour of your choosing, trims away the transparent margins,
+centres the artwork on a square canvas, and writes out a uniformly sized PNG.
+
+It is built on [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp), so it runs anywhere
+.NET does and needs no native image libraries or platform-specific dependencies.
 
 ## Features
 
-- **Icon Loading**: Load icons from files, resources, or embedded assets
-- **Format Conversion**: Convert between different icon formats (ICO, PNG, SVG, etc.)
-- **Resolution Management**: Extract and generate icons at different resolutions
-- **Platform Integration**: Work with platform-specific icon formats
-- **Color Manipulation**: Apply filters, change colors, or adjust transparency
-- **Batch Processing**: Process multiple icons with consistent settings
-- **Memory Efficiency**: Optimized for minimal memory usage
+- **Batch Processing**: Processes every file in an input directory in a single run
+- **Colour Tinting**: Flattens each image to a silhouette and tints it with any HTML/CSS colour value
+- **Automatic Trimming**: Detects the bounding box of non-transparent pixels and crops to it
+- **Square Centring**: Pads the trimmed artwork to a square canvas so icons align consistently
+- **Configurable Padding**: Insets the artwork by a fixed number of pixels per side without changing the output dimensions
+- **Downscale-Only Resizing**: Shrinks artwork to a maximum size but never upscales, so nothing is blurred
+- **Alpha Preservation**: Writes 8-bit RGBA PNGs with transparency intact
+- **Resilient**: Reports and skips any file it cannot process, so one bad input never aborts the batch
 
 ## Installation
 
-### Package Manager Console
+IconHelper is not published as a NuGet package. Build it from source.
 
-```powershell
-Install-Package ktsu.IconHelper
-```
-
-### .NET CLI
+### Build from source
 
 ```bash
-dotnet add package ktsu.IconHelper
+git clone https://github.com/ktsu-dev/IconHelper.git
+cd IconHelper
+dotnet build -c Release
 ```
 
-### Package Reference
+### Run directly
 
-```xml
-<PackageReference Include="ktsu.IconHelper" Version="x.y.z" />
+```bash
+dotnet run --project IconHelper/IconHelper.csproj -- --input ./icons --output ./out
 ```
+
+### Publish a standalone executable
+
+```bash
+dotnet publish IconHelper/IconHelper.csproj -c Release -o ./publish
+./publish/IconHelper --input ./icons --output ./out
+```
+
+The tool targets **.NET 9**, so a matching (or newer) SDK/runtime is required.
 
 ## Usage Examples
 
-### Basic Icon Loading
+### Basic Example
 
-```csharp
-using ktsu.IconHelper;
+Recolour every image in `./icons` to white and write the results to `./out`:
 
-// Load an icon from a file
-var icon = IconLoader.FromFile("path/to/icon.ico");
-
-// Load from embedded resource
-var resourceIcon = IconLoader.FromResource("MyNamespace.Resources.appicon.ico");
-
-// Load from base64 string
-var base64Icon = IconLoader.FromBase64(base64String);
+```bash
+IconHelper --input ./icons --output ./out
 ```
 
-### Icon Conversion
+### Choosing a Colour
 
-```csharp
-using ktsu.IconHelper;
+Colours are parsed with `ColorTranslator.FromHtml`, so hex values and named colours both work:
 
-// Convert between formats
-var pngBytes = IconConverter.ToPng(iconInstance);
-var icoBytes = IconConverter.ToIco(bitmapInstance);
-var svgContent = IconConverter.ToSvg(iconInstance);
+```bash
+# Hex
+IconHelper -i ./icons -o ./out -c "#FF8800"
 
-// Save directly to file
-IconConverter.SaveAsPng(iconInstance, "output.png");
+# Named colour
+IconHelper -i ./icons -o ./out -c "CornflowerBlue"
 ```
 
-### Resolution Extraction
+### Setting a Maximum Size
 
-```csharp
-using ktsu.IconHelper;
+Icons larger than 64x64 are scaled down to fit. Smaller icons are left at their natural size:
 
-// Get specific sizes from multi-resolution icon
-var icon = IconLoader.FromFile("multisize.ico");
-var icon16 = IconResolution.Extract(icon, 16, 16);
-var icon32 = IconResolution.Extract(icon, 32, 32);
-var icon64 = IconResolution.Extract(icon, 64, 64);
-
-// Create a multi-resolution icon
-var multiIcon = IconResolution.Combine(new[] { icon16, icon32, icon64 });
-IconLoader.SaveToFile(multiIcon, "combined.ico");
+```bash
+IconHelper -i ./icons -o ./out -s 64
 ```
 
-### Color Manipulation
+### Adding Padding
 
-```csharp
-using ktsu.IconHelper;
+Inset the artwork by 8 pixels on each side. The output canvas stays the same size, and the artwork
+inside it is scaled down to make room:
 
-// Adjust icon colors
-var icon = IconLoader.FromFile("original.ico");
-
-// Change specific color
-var replacedColorIcon = IconColorizer.ReplaceColor(icon, Color.Blue, Color.Red);
-
-// Apply tint
-var tintedIcon = IconColorizer.ApplyTint(icon, Color.FromArgb(128, 255, 0, 0));
-
-// Invert colors
-var invertedIcon = IconColorizer.Invert(icon);
-
-// Adjust transparency
-var transparentIcon = IconColorizer.SetTransparency(icon, 0.5f);
+```bash
+IconHelper -i ./icons -o ./out -s 128 -p 8
 ```
 
-### Platform-Specific Usage
+### Full Example
 
-```csharp
-using ktsu.IconHelper;
-using ktsu.IconHelper.Platforms;
-
-// Windows-specific icon handling
-var windowsIcon = WindowsIconHelper.ExtractFromExe("application.exe");
-var fileTypeIcon = WindowsIconHelper.GetFileTypeIcon(".pdf");
-
-// macOS-specific icon handling
-var macIcon = MacIconHelper.CreateFromImage("image.png");
-
-// Cross-platform icon conversion
-var platformIcon = PlatformIconConverter.ConvertToCurrent(genericIcon);
+```bash
+IconHelper --input ./raw-icons --output ./themed-icons --color "#E0E0E0" --size 96 --padding 6
 ```
 
-## API Reference
+Output while running:
 
-### `IconLoader` Class
+```
+Processing ./raw-icons/save.png...
+Processing ./raw-icons/open.png...
+Processing ./raw-icons/notes.txt...
+Failed to process ./raw-icons/notes.txt: UnknownImageFormatException: Image cannot be loaded...
+Done. 2 file(s) written, 1 failed.
+```
 
-Provides methods for loading icons from various sources.
+## How It Works
 
-#### Methods
+Each file is processed through the following pipeline:
 
-| Name | Parameters | Return Type | Description |
-|------|------------|-------------|-------------|
-| `FromFile` | `string path` | `Icon` | Loads an icon from a file path |
-| `FromResource` | `string resourceName` | `Icon` | Loads an icon from an embedded resource |
-| `FromBase64` | `string base64String` | `Icon` | Creates an icon from a base64 encoded string |
-| `FromStream` | `Stream stream` | `Icon` | Loads an icon from a stream |
-| `SaveToFile` | `Icon icon, string path` | `void` | Saves an icon to a file |
+1. **Load** the image as RGBA32. Any file that cannot be read or decoded is reported and skipped.
+2. **Desaturate** using ImageSharp's black-and-white filter, reducing the image to a silhouette.
+3. **Measure** the brightest opaque pixel. If every opaque pixel is black, the silhouette is treated
+   as fully opaque instead. This is what allows solid black glyphs to be recoloured.
+4. **Tint** each pixel by scaling the requested colour by that pixel's normalized brightness.
+   Fully transparent pixels are zeroed so they do not bleed colour into the edges.
+5. **Trim** to the bounding box of the non-transparent pixels.
+6. **Square** the result by padding the shorter axis with transparency.
+7. **Resize** to `min(trimmedSize, --size)`, then inset by `--padding` pixels per side and pad back
+   out to the final canvas size.
+8. **Save** as an 8-bit RGBA PNG in the output directory, reusing the input file's base name with a
+   `.png` extension. The output directory is created if it does not already exist.
 
-### `IconConverter` Class
+An image with no visible pixels has no artwork to measure, so steps 5 to 7 are skipped and a fully
+transparent square is written instead, sized by the same downscale-only rule applied to the source
+canvas.
 
-Provides methods for converting icons between different formats.
+Files whose names contain `.new.png` are skipped, so re-running the tool over a directory that
+already contains its own output will not reprocess those files.
 
-#### Methods
+## Command-Line Reference
 
-| Name | Parameters | Return Type | Description |
-|------|------------|-------------|-------------|
-| `ToPng` | `Icon icon` | `byte[]` | Converts an icon to PNG format |
-| `ToIco` | `Bitmap bitmap` | `byte[]` | Converts a bitmap to ICO format |
-| `ToSvg` | `Icon icon` | `string` | Converts an icon to SVG format |
-| `SaveAsPng` | `Icon icon, string path` | `void` | Saves an icon as a PNG file |
-| `SaveAsIco` | `Bitmap bitmap, string path` | `void` | Saves a bitmap as an ICO file |
+| Short | Long | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `-i` | `--input` | Yes | n/a | Path to the directory containing the input files |
+| `-o` | `--output` | Yes | n/a | Path to the directory where modified files are written |
+| `-c` | `--color` | No | `#FFFFFF` | The colour to tint the icon with |
+| `-s` | `--size` | No | `128` | The maximum size, in pixels, of the output icon |
+| `-p` | `--padding` | No | `0` | Pixels of padding per side. Must be less than `size / 2`. Does not change the output dimensions |
 
-### `IconResolution` Class
+## Exit Codes
 
-Provides methods for working with multi-resolution icons.
+| Code | Meaning |
+|------|---------|
+| `0` | Every file was processed successfully. Also returned for `--help` and `--version` |
+| `1` | The arguments were unusable, for example a missing `--input` or `padding >= size / 2` |
+| `2` | The batch ran to completion but at least one file could not be processed |
 
-#### Methods
+Code `2` means the run finished and the remaining icons were still written. Check the summary line
+for how many succeeded.
 
-| Name | Parameters | Return Type | Description |
-|------|------------|-------------|-------------|
-| `Extract` | `Icon icon, int width, int height` | `Icon` | Extracts an icon at the specified resolution |
-| `Combine` | `IEnumerable<Icon> icons` | `Icon` | Combines multiple icons into a multi-resolution icon |
-| `GetAvailableSizes` | `Icon icon` | `Size[]` | Gets all available sizes in a multi-resolution icon |
+## Notes and Limitations
 
-### `IconColorizer` Class
-
-Provides methods for manipulating icon colors.
-
-#### Methods
-
-| Name | Parameters | Return Type | Description |
-|------|------------|-------------|-------------|
-| `ReplaceColor` | `Icon icon, Color oldColor, Color newColor` | `Icon` | Replaces a specific color in an icon |
-| `ApplyTint` | `Icon icon, Color tint` | `Icon` | Applies a color tint to an icon |
-| `Invert` | `Icon icon` | `Icon` | Inverts the colors of an icon |
-| `SetTransparency` | `Icon icon, float alpha` | `Icon` | Adjusts the transparency of an icon |
+- Output is always PNG, and the extension is rewritten to match, so `logo.jpg` becomes `logo.png`. If
+  the input directory holds two files with the same base name but different extensions, the later one
+  overwrites the earlier.
+- Input formats are whatever ImageSharp can decode (PNG, JPEG, BMP, GIF, TGA, TIFF, WebP, PBM, QOI).
+  Vector formats such as SVG are not supported.
+- The tool only ever shrinks artwork. Passing a `--size` larger than the source icon leaves it at its
+  original size.
+- Colour information in the source is discarded, so every icon becomes a single-colour silhouette.
+- Every failure is reported and skipped, so the run always continues to the end and exits with
+  code `2` if anything failed.
 
 ## Contributing
 
-Contributions are welcome! Here's how you can help:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please make sure to update tests as appropriate and adhere to the existing coding style.
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.

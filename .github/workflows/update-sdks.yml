@@ -46,8 +46,14 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          # Keyed on the files that actually pin versions. See the same note in dotnet.yml. This
+          # workflow rewrites the SDK versions in global.json, so including it here also means the
+          # verification build after an update does not restore against a stale key.
           cache: true
-          cache-dependency-path: "**/*.csproj"
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
 
       - name: Configure Git
         run: |

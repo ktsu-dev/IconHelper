@@ -68,8 +68,17 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}.x
+          # setup-dotnet caches the NuGet global packages folder and keys it on a hash of these
+          # files. The csproj files alone are not enough: this repository uses central package
+          # management, so Directory.Packages.props is where versions actually live, and global.json
+          # pins the ktsu SDK versions, which are NuGet packages too. Without them a version bump in
+          # either file reuses the previous key, and because a cache hit never re-saves, the newly
+          # downloaded packages would never make it into the cache.
           cache: true
-          cache-dependency-path: "**/*.csproj"
+          cache-dependency-path: |
+            **/*.csproj
+            **/Directory.Packages.props
+            **/global.json
 
       # Ensure NuGet packages directory exists for caching (prevents error when pipeline exits early)
       - name: Ensure NuGet cache directory exists

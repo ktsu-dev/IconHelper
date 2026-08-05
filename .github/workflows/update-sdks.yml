@@ -15,8 +15,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Default permissions
-permissions: read-all
+# Default permissions. Read-only at the workflow level, with the single job that needs to write
+# requesting exactly what it needs below.
+permissions:
+  contents: read
 
 env:
   DOTNET_VERSION: "10.0"

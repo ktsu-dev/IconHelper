@@ -7,7 +7,9 @@ namespace ktsu.IconHelper.Test;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-using Color = System.Drawing.Color;
+using ktsu.Semantics.Color;
+
+using Color = ktsu.Semantics.Color.Color;
 
 [TestClass]
 public class ProcessImageTests
@@ -21,7 +23,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(200, 200);
 		TestImages.FillRect(image, 20, 40, 120, 40, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 128, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 128, 0);
 
 		Assert.AreEqual(image.Width, image.Height, "Output canvas should always be square.");
 	}
@@ -32,7 +34,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(300, 300);
 		TestImages.FillRect(image, 10, 10, 250, 250, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 32, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 32, 0);
 
 		Assert.AreEqual(32, image.Width);
 		Assert.AreEqual(32, image.Height);
@@ -44,7 +46,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(64, 64);
 		TestImages.FillRect(image, 10, 10, 12, 12, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 512, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 512, 0);
 
 		Assert.AreEqual(12, image.Width, "Artwork smaller than the requested size must not be grown.");
 		Assert.AreEqual(12, image.Height);
@@ -56,7 +58,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(400, 400);
 		TestImages.FillRect(image, 300, 12, 40, 40, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 256, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 256, 0);
 
 		// The 400x400 canvas is mostly empty, so only the 40x40 shape should survive.
 		Assert.AreEqual(40, image.Width, "Transparent margins should be cropped away.");
@@ -72,7 +74,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(60, 60);
 		TestImages.FillRect(image, 10, 10, 30, 20, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 512, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 512, 0);
 
 		Assert.AreEqual(30, image.Width, "The crop should cover the full width of the artwork.");
 		Assert.AreEqual(30, image.Height, "The shorter axis is padded up to the longer one.");
@@ -85,7 +87,7 @@ public class ProcessImageTests
 		// stays inverted, which used to produce a negative crop width and throw.
 		using Image<Rgba32> image = TestImages.Blank(64, 48);
 
-		IconHelper.ProcessImage(image, Color.White, 128, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 128, 0);
 
 		// The requested 128 is larger than the source, so the downscale-only rule caps the side at
 		// the longest edge of the source canvas.
@@ -99,7 +101,7 @@ public class ProcessImageTests
 	{
 		using Image<Rgba32> image = TestImages.Blank(200, 200);
 
-		IconHelper.ProcessImage(image, Color.White, 32, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 32, 0);
 
 		Assert.AreEqual(32, image.Width);
 		Assert.AreEqual(32, image.Height);
@@ -125,7 +127,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(50, 50);
 		TestImages.FillRect(image, 10, 10, 20, 20, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 512, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 512, 0);
 
 		Assert.AreEqual(20, image.Width);
 		Assert.AreEqual(255, image[0, 0].A, "The first column/row of the artwork should be kept.");
@@ -138,7 +140,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(80, 80);
 		TestImages.FillRect(image, 20, 20, 40, 40, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.FromArgb(0, 128, 255), 40, 0);
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 128, 255), 40, 0);
 
 		Rgba32 centre = image[20, 20];
 		Assert.AreEqual(0, centre.R);
@@ -155,7 +157,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(80, 80);
 		TestImages.FillRect(image, 20, 20, 40, 40, OpaqueBlack);
 
-		IconHelper.ProcessImage(image, Color.FromArgb(0, 255, 0), 40, 0);
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 255, 0), 40, 0);
 
 		Rgba32 centre = image[20, 20];
 		Assert.AreEqual(0, centre.R);
@@ -172,7 +174,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(80, 80);
 		TestImages.FillRect(image, 20, 20, 40, 40, new Rgba32(80, 80, 80, 255));
 
-		IconHelper.ProcessImage(image, Color.FromArgb(200, 100, 50), 40, 0);
+		IconHelper.ProcessImage(image, Color.FromBytes(200, 100, 50), 40, 0);
 
 		Rgba32 brightest = TestImages.BrightestOpaquePixel(image);
 		Assert.AreEqual(200, brightest.R, "The brightest opaque pixel should reach the target colour exactly.");
@@ -187,7 +189,7 @@ public class ProcessImageTests
 		TestImages.FillRect(image, 10, 10, 30, 30, new Rgba32(255, 0, 0, 255));
 		TestImages.FillRect(image, 40, 40, 30, 30, new Rgba32(30, 144, 255, 255));
 
-		IconHelper.ProcessImage(image, Color.FromArgb(0, 0, 255), 60, 0);
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 0, 255), 60, 0);
 
 		// Tinting with pure blue means no pixel may carry any red or green at all,
 		// regardless of what colour it started as.
@@ -208,7 +210,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(200, 200);
 		TestImages.FillRect(image, 20, 20, 128, 128, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 64, 8);
+		IconHelper.ProcessImage(image, NamedColors.White, 64, 8);
 
 		Assert.AreEqual(64, image.Width, "Padding insets the artwork but must not change the canvas size.");
 		Assert.AreEqual(64, image.Height);
@@ -220,7 +222,7 @@ public class ProcessImageTests
 		using Image<Rgba32> image = TestImages.Blank(200, 200);
 		TestImages.FillRect(image, 20, 20, 128, 128, OpaqueWhite);
 
-		IconHelper.ProcessImage(image, Color.White, 64, 8);
+		IconHelper.ProcessImage(image, NamedColors.White, 64, 8);
 
 		Assert.AreEqual(0, image[0, 0].A, "The padded border should be fully transparent.");
 		Assert.AreEqual(0, image[63, 63].A);
@@ -235,7 +237,7 @@ public class ProcessImageTests
 		TestImages.FillRect(image, 10, 10, 40, 40, OpaqueWhite);
 		TestImages.FillRect(image, 20, 20, 10, 10, TestImages.Transparent);
 
-		IconHelper.ProcessImage(image, Color.White, 40, 0);
+		IconHelper.ProcessImage(image, NamedColors.White, 40, 0);
 
 		Assert.AreEqual(40, image.Width);
 		Assert.AreEqual(0, image[15, 15].A, "The transparent notch should survive processing.");

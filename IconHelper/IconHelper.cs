@@ -6,18 +6,20 @@ namespace ktsu.IconHelper;
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 
 using CommandLine;
 
 using ktsu.Extensions;
+using ktsu.Semantics.Paths;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+
+using Color = ktsu.Semantics.Color.Color;
 
 internal static class IconHelper
 {
@@ -70,7 +72,8 @@ internal static class IconHelper
 			Environment.Exit(ExitInvalidArguments);
 		}
 
-		System.Drawing.Color color = ColorTranslator.FromHtml(args.Color);
+		// Validate already proved this parses, so the result is not worth re-checking.
+		_ = ColorParser.TryParse(args.Color, out Color color);
 		BatchResult result = ProcessDirectory(args, color);
 
 		Console.WriteLine(result.Failed == 0
@@ -93,13 +96,26 @@ internal static class IconHelper
 		"Design",
 		"CA1031:Do not catch general exception types",
 		Justification = "This is a batch tool. Any failure on one file must be reported and skipped rather than abandoning the remaining files, and the failure is surfaced to the console and in the returned BatchResult.")]
-	internal static BatchResult ProcessDirectory(Arguments args, System.Drawing.Color color)
+	internal static BatchResult ProcessDirectory(Arguments args, Color color)
 	{
-		Directory.CreateDirectory(args.OutputPath);
+		Ensure.NotNull(args);
+
+		// Validate resolves these too, so a failure here means the caller skipped validation.
+		if (!args.TryResolveInput(out AbsoluteDirectoryPath? inputDirectory, out string? inputError))
+		{
+			throw new ArgumentException(inputError, nameof(args));
+		}
+
+		if (!args.TryResolveOutput(out AbsoluteDirectoryPath? outputDirectory, out string? outputError))
+		{
+			throw new ArgumentException(outputError, nameof(args));
+		}
+
+		Directory.CreateDirectory(outputDirectory);
 
 		int processed = 0;
 		int failed = 0;
-		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(args.InputPath, "*").ToCollection();
+		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(inputDirectory, "*").ToCollection();
 		foreach (string? file in files)
 		{
 			if (file.Contains(".new.png"))
@@ -114,8 +130,11 @@ internal static class IconHelper
 
 				ProcessImage(image, color, args.Size, args.Padding);
 
-				// Always write a .png extension, since the encoder always writes PNG data
-				string outputFilePath = Path.Join(args.OutputPath, $"{Path.GetFileNameWithoutExtension(file)}.png");
+				// Always write a .png extension, since the encoder always writes PNG data. FileName
+				// rejects anything carrying a directory separator, and the / operator composes the
+				// two into an absolute file path.
+				FileName outputFileName = FileName.Create<FileName>($"{Path.GetFileNameWithoutExtension(file)}.png");
+				AbsoluteFilePath outputFilePath = outputDirectory / outputFileName;
 
 				image.SaveAsPng(outputFilePath, Encoder);
 				processed++;
@@ -140,8 +159,14 @@ internal static class IconHelper
 	/// centres it on a square canvas and scales it down to at most <paramref name="size"/> pixels.
 	/// The image is mutated in place.
 	/// </summary>
-	internal static void ProcessImage(Image<Rgba32> image, System.Drawing.Color color, int size, int padding)
+	internal static void ProcessImage(Image<Rgba32> image, Color color, int size, int padding)
 	{
+		Ensure.NotNull(image);
+
+		// The semantic Color stores linear channels as doubles. Encode to sRGB bytes once here rather
+		// than per pixel, both for speed and so the tint below stays plain byte arithmetic.
+		(byte colorR, byte colorG, byte colorB, byte _) = color.ToBytes();
+
 		int top = image.Height;
 		int left = image.Width;
 		int right = 0;
@@ -247,9 +272,9 @@ internal static class IconHelper
 					// yields the colour exactly, intermediate values yield proportionally
 					// darker shades of it, which is what keeps edges anti-aliased. Alpha is
 					// deliberately left alone so the original transparency is preserved.
-					pixel.R = (byte)(newValue / 255f * color.R);
-					pixel.G = (byte)(newValue / 255f * color.G);
-					pixel.B = (byte)(newValue / 255f * color.B);
+					pixel.R = (byte)(newValue / 255f * colorR);
+					pixel.G = (byte)(newValue / 255f * colorG);
+					pixel.B = (byte)(newValue / 255f * colorB);
 				}
 			}
 		});

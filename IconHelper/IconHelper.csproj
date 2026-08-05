@@ -11,7 +11,10 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="ktsu.Extensions" />
-  <PackageReference Include="Polyfill" VersionOverride="9.7.1" />
+    <PackageReference Include="ktsu.Semantics.Color" />
+    <PackageReference Include="ktsu.Semantics.Paths" />
+    <PackageReference Include="ktsu.Semantics.Strings" />
+    <PackageReference Include="Polyfill" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 </Project>

@@ -5,10 +5,27 @@
 namespace ktsu.IconHelper.Test;
 
 using System.Collections.ObjectModel;
+using System.IO;
+
+using ktsu.Semantics.Paths;
 
 [TestClass]
 public class ArgumentsTests
 {
+	/// <summary>
+	/// Builds arguments whose paths are valid, so that only the property under test can fail.
+	/// </summary>
+	private static Arguments ValidArguments(TempDirectory temp)
+	{
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+		return new Arguments
+		{
+			InputPath = input,
+			OutputPath = temp.Combine("out"),
+		};
+	}
+
 	[TestMethod]
 	public void DefaultsAreWhiteAt128PixelsWithNoPadding()
 	{
@@ -22,20 +39,24 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
-	public void ValidateAcceptsDefaultArguments()
+	public void ValidateAcceptsWellFormedArguments()
 	{
-		Arguments args = new();
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
 
 		bool valid = args.Validate(out Collection<string> errors);
 
-		Assert.IsTrue(valid, "Default arguments should validate.");
+		Assert.IsTrue(valid, $"Expected valid arguments but got: {string.Join(", ", errors)}");
 		Assert.AreEqual(0, errors.Count);
 	}
 
 	[TestMethod]
 	public void ValidateAcceptsPaddingBelowHalfTheSize()
 	{
-		Arguments args = new() { Size = 64, Padding = 31 };
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = 64;
+		args.Padding = 31;
 
 		bool valid = args.Validate(out Collection<string> errors);
 
@@ -46,7 +67,10 @@ public class ArgumentsTests
 	[TestMethod]
 	public void ValidateRejectsPaddingEqualToHalfTheSize()
 	{
-		Arguments args = new() { Size = 64, Padding = 32 };
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = 64;
+		args.Padding = 32;
 
 		bool valid = args.Validate(out Collection<string> errors);
 
@@ -56,24 +80,127 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
-	public void ValidateRejectsPaddingGreaterThanHalfTheSize()
-	{
-		Arguments args = new() { Size = 32, Padding = 100 };
-
-		bool valid = args.Validate(out Collection<string> errors);
-
-		Assert.IsFalse(valid, "Padding larger than half the size should be rejected.");
-		Assert.AreEqual(1, errors.Count);
-	}
-
-	[TestMethod]
 	public void ValidateUsesIntegerDivisionForOddSizes()
 	{
 		// 33 / 2 == 16 under integer division, so 16 is rejected and 15 accepted.
-		Arguments rejected = new() { Size = 33, Padding = 16 };
-		Arguments accepted = new() { Size = 33, Padding = 15 };
+		using TempDirectory temp = new();
+		Arguments rejected = ValidArguments(temp);
+		rejected.Size = 33;
+		rejected.Padding = 16;
+
+		Arguments accepted = ValidArguments(temp);
+		accepted.Size = 33;
+		accepted.Padding = 15;
 
 		Assert.IsFalse(rejected.Validate(out _), "Padding of 16 is not less than 33 / 2 == 16.");
 		Assert.IsTrue(accepted.Validate(out _), "Padding of 15 is less than 33 / 2 == 16.");
+	}
+
+	[TestMethod]
+	public void ValidateRejectsAnInputDirectoryThatDoesNotExist()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.InputPath = temp.UncreatedSubdirectory("nowhere");
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, "A missing input directory should be caught by validation, not at enumeration time.");
+		Assert.AreEqual(1, errors.Count);
+		StringAssert.Contains(errors[0], "--input directory does not exist");
+	}
+
+	[TestMethod]
+	public void ValidateRejectsAnInputThatIsAFile()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		string file = temp.Combine("not-a-directory.png");
+		File.WriteAllText(file, "x");
+		args.InputPath = file;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.AreEqual(1, errors.Count);
+		StringAssert.Contains(errors[0], "--input is a file, not a directory");
+	}
+
+	[TestMethod]
+	public void ValidateRejectsAnOutputThatIsAFile()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		string file = temp.Combine("occupied.png");
+		File.WriteAllText(file, "x");
+		args.OutputPath = file;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.AreEqual(1, errors.Count);
+		StringAssert.Contains(errors[0], "--output is a file, not a directory");
+	}
+
+	[TestMethod]
+	public void ValidateAcceptsAnOutputDirectoryThatDoesNotExistYet()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.OutputPath = temp.UncreatedSubdirectory("created-later");
+
+		Assert.IsTrue(args.Validate(out _), "The output directory is created on demand, so it need not exist yet.");
+	}
+
+	[TestMethod]
+	public void ValidateRejectsEmptyPaths()
+	{
+		Arguments args = new();
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.AreEqual(2, errors.Count, $"Both paths should be reported: {string.Join(", ", errors)}");
+	}
+
+	[TestMethod]
+	public void ValidateRejectsAnUnparseableColor()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Color = "not-a-color";
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.AreEqual(1, errors.Count);
+		StringAssert.Contains(errors[0], "is not a color");
+	}
+
+	[TestMethod]
+	public void ValidateReportsEveryProblemAtOnce()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.InputPath = temp.UncreatedSubdirectory("nowhere");
+		args.Size = 32;
+		args.Padding = 99;
+		args.Color = "nonsense";
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.AreEqual(3, errors.Count, $"Expected padding, input and color errors but got: {string.Join(", ", errors)}");
+	}
+
+	[TestMethod]
+	public void ResolvingInputTurnsARelativePathIntoAnAbsoluteOne()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.InputPath = ".";
+
+		Assert.IsTrue(args.TryResolveInput(out AbsoluteDirectoryPath? resolved, out string? error), error);
+		Assert.AreEqual(Directory.GetCurrentDirectory(), (string)resolved);
 	}
 }

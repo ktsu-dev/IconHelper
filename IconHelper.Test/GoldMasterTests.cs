@@ -86,7 +86,7 @@ public class GoldMasterTests
 
 		Assert.IsTrue(args.Validate(out _), "The gold master case itself should use valid arguments.");
 
-		BatchResult result = IconHelper.ProcessDirectory(args, TestImages.ParseHexColour(colour));
+		BatchResult result = IconHelper.ProcessDirectory(args, TestImages.ParseColor(colour));
 		Assert.AreEqual(1, result.Written, "The fixture should have produced exactly one output file.");
 
 		string actualFile = Path.Combine(caseOutput, $"{input}.png");

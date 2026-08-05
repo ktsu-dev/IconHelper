@@ -69,15 +69,28 @@ IconHelper --input ./icons --output ./out
 
 ### Choosing a Colour
 
-Colours are parsed with `ColorTranslator.FromHtml`, so hex values and named colours both work:
+Colours are parsed with [`ktsu.Semantics.Color`](https://github.com/ktsu-dev/Semantics). Hex values in
+`#RGB`, `#RRGGBB` and `#RRGGBBAA` form are accepted, with the leading `#` optional, along with a small
+set of colour names:
 
 ```bash
-# Hex
+# Six digit hex
 IconHelper -i ./icons -o ./out -c "#FF8800"
 
+# Three digit shorthand, equivalent to #FF8800
+IconHelper -i ./icons -o ./out -c "#F80"
+
+# Eight digit hex, with alpha
+IconHelper -i ./icons -o ./out -c "#FF8800AA"
+
 # Named colour
-IconHelper -i ./icons -o ./out -c "CornflowerBlue"
+IconHelper -i ./icons -o ./out -c "orange"
 ```
+
+The known names are `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `gray`,
+`grey`, `orange`, `purple` and `transparent`, matched case insensitively. Any other colour must be
+given as hex. An unrecognised value is rejected by validation with the list of names, rather than
+being silently misread.
 
 ### Setting a Maximum Size
 
@@ -142,7 +155,7 @@ already contains its own output will not reprocess those files.
 |-------|------|----------|---------|-------------|
 | `-i` | `--input` | Yes | n/a | Path to the directory containing the input files |
 | `-o` | `--output` | Yes | n/a | Path to the directory where modified files are written |
-| `-c` | `--color` | No | `#FFFFFF` | The colour to tint the icon with |
+| `-c` | `--color` | No | `#FFFFFF` | The colour to tint the icon with, as hex or a known name |
 | `-s` | `--size` | No | `128` | The maximum size, in pixels, of the output icon |
 | `-p` | `--padding` | No | `0` | Pixels of padding per side. Must be less than `size / 2`. Does not change the output dimensions |
 
@@ -151,7 +164,7 @@ already contains its own output will not reprocess those files.
 | Code | Meaning |
 |------|---------|
 | `0` | Every file was processed successfully. Also returned for `--help` and `--version` |
-| `1` | The arguments were unusable, for example a missing `--input` or `padding >= size / 2` |
+| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an unrecognised `--color`, or `padding >= size / 2` |
 | `2` | The batch ran to completion but at least one file could not be processed |
 
 Code `2` means the run finished and the remaining icons were still written. Check the summary line

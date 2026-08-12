@@ -1,6 +1,6 @@
-## v1.4.5 (patch)
+## v1.4.6 (patch)
 
-Changes since v1.4.4:
+Changes since v1.4.5:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
 

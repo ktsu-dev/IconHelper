@@ -14,7 +14,7 @@
     <PackageReference Include="ktsu.Semantics.Color" />
     <PackageReference Include="ktsu.Semantics.Paths" />
     <PackageReference Include="ktsu.Semantics.Strings" />
-    <PackageReference Include="Polyfill" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 </Project>

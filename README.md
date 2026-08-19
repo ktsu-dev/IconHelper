@@ -2,8 +2,7 @@
 
 > A .NET command-line tool that batch-normalizes icon images by recoloring, trimming, squaring, and resizing them into consistent PNGs.
 
-[![License](https://img.shields.io/github/license/ktsu-dev/IconHelper.svg?label=License&logo=github)](LICENSE.md)
-[![GitHub release](https://img.shields.io/github/v/release/ktsu-dev/IconHelper?label=Release&logo=github)](https://github.com/ktsu-dev/IconHelper/releases)
+[![License](https://img.shields.io/github/license/ktsu-dev/IconHelper.svg?label=License&logo=nuget)](LICENSE.md)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/IconHelper?label=Commits&logo=github)](https://github.com/ktsu-dev/IconHelper/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/IconHelper?label=Contributors&logo=github)](https://github.com/ktsu-dev/IconHelper/graphs/contributors)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/IconHelper/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/IconHelper/actions)

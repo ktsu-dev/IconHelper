@@ -1,6 +1,8 @@
-## v1.4.14
+## v1.4.15 (patch)
 
-No significant changes detected since v1.4.14.
+Changes since v1.4.14:
+
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
 ## v1.4.14 (patch)
 

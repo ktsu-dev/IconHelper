@@ -7,8 +7,8 @@
     <PackageVersion Include="Polyfill" Version="11.2.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageVersion Include="ktsu.Extensions" Version="1.6.8" />
-    <PackageVersion Include="ktsu.Semantics.Color" Version="3.2.2" />
-    <PackageVersion Include="ktsu.Semantics.Paths" Version="3.2.2" />
-    <PackageVersion Include="ktsu.Semantics.Strings" Version="3.2.2" />
+    <PackageVersion Include="ktsu.Semantics.Color" Version="3.2.3" />
+    <PackageVersion Include="ktsu.Semantics.Paths" Version="3.2.3" />
+    <PackageVersion Include="ktsu.Semantics.Strings" Version="3.2.3" />
   </ItemGroup>
 </Project>

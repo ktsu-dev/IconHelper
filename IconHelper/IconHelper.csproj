@@ -1,12 +1,7 @@
 <Project>
   <Sdk Name="Microsoft.NET.Sdk" />
   <Sdk Name="ktsu.Sdk" />
-  <Sdk Name="ktsu.Sdk.App" />
-
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <TargetFrameworks></TargetFrameworks>
-  </PropertyGroup>
+  <Sdk Name="ktsu.Sdk.Tool" />
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />

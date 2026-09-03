@@ -3,6 +3,8 @@
 > A .NET command-line tool that batch-normalizes icon images by recoloring, trimming, squaring, and resizing them into consistent PNGs.
 
 [![License](https://img.shields.io/github/license/ktsu-dev/IconHelper.svg?label=License&logo=nuget)](LICENSE.md)
+[![NuGet Version](https://img.shields.io/nuget/v/ktsu.IconHelper.svg?label=NuGet&logo=nuget)](https://www.nuget.org/packages/ktsu.IconHelper/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.IconHelper.svg?label=Downloads&logo=nuget)](https://www.nuget.org/packages/ktsu.IconHelper/)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/IconHelper?label=Commits&logo=github)](https://github.com/ktsu-dev/IconHelper/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/IconHelper?label=Contributors&logo=github)](https://github.com/ktsu-dev/IconHelper/graphs/contributors)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/IconHelper/dotnet.yml?branch=main&label=Build&logo=github)](https://github.com/ktsu-dev/IconHelper/actions)
@@ -31,7 +33,30 @@ It is built on [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp), 
 
 ## Installation
 
-IconHelper is not published as a NuGet package. Build it from source.
+IconHelper is distributed as a .NET tool. Install it globally from NuGet:
+
+```bash
+dotnet tool install --global ktsu.IconHelper
+```
+
+That puts an `iconhelper` command on your `PATH`. To update or remove it later:
+
+```bash
+dotnet tool update --global ktsu.IconHelper
+dotnet tool uninstall --global ktsu.IconHelper
+```
+
+To pin the tool to a single repository instead of installing it machine-wide, use a local tool
+manifest:
+
+```bash
+dotnet new tool-manifest
+dotnet tool install ktsu.IconHelper
+dotnet tool run iconhelper --input ./icons --output ./out
+```
+
+The package is framework-dependent and runtime-agnostic, so it needs the **.NET 10** runtime
+installed. There is no standalone, self-contained binary.
 
 ### Build from source
 
@@ -47,15 +72,6 @@ dotnet build -c Release
 dotnet run --project IconHelper/IconHelper.csproj -- --input ./icons --output ./out
 ```
 
-### Publish a standalone executable
-
-```bash
-dotnet publish IconHelper/IconHelper.csproj -c Release -o ./publish
-./publish/IconHelper --input ./icons --output ./out
-```
-
-The tool targets **.NET 9**, so a matching (or newer) SDK/runtime is required.
-
 ## Usage Examples
 
 ### Basic Example
@@ -63,7 +79,7 @@ The tool targets **.NET 9**, so a matching (or newer) SDK/runtime is required.
 Recolour every image in `./icons` to white and write the results to `./out`:
 
 ```bash
-IconHelper --input ./icons --output ./out
+iconhelper --input ./icons --output ./out
 ```
 
 ### Choosing a Colour
@@ -74,16 +90,16 @@ set of colour names:
 
 ```bash
 # Six digit hex
-IconHelper -i ./icons -o ./out -c "#FF8800"
+iconhelper -i ./icons -o ./out -c "#FF8800"
 
 # Three digit shorthand, equivalent to #FF8800
-IconHelper -i ./icons -o ./out -c "#F80"
+iconhelper -i ./icons -o ./out -c "#F80"
 
 # Eight digit hex, with alpha
-IconHelper -i ./icons -o ./out -c "#FF8800AA"
+iconhelper -i ./icons -o ./out -c "#FF8800AA"
 
 # Named colour
-IconHelper -i ./icons -o ./out -c "orange"
+iconhelper -i ./icons -o ./out -c "orange"
 ```
 
 The known names are `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `gray`,
@@ -96,7 +112,7 @@ being silently misread.
 Icons larger than 64x64 are scaled down to fit. Smaller icons are left at their natural size:
 
 ```bash
-IconHelper -i ./icons -o ./out -s 64
+iconhelper -i ./icons -o ./out -s 64
 ```
 
 ### Adding Padding
@@ -105,13 +121,13 @@ Inset the artwork by 8 pixels on each side. The output canvas stays the same siz
 inside it is scaled down to make room:
 
 ```bash
-IconHelper -i ./icons -o ./out -s 128 -p 8
+iconhelper -i ./icons -o ./out -s 128 -p 8
 ```
 
 ### Full Example
 
 ```bash
-IconHelper --input ./raw-icons --output ./themed-icons --color "#E0E0E0" --size 96 --padding 6
+iconhelper --input ./raw-icons --output ./themed-icons --color "#E0E0E0" --size 96 --padding 6
 ```
 
 Output while running:

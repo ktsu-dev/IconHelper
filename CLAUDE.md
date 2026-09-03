@@ -19,21 +19,30 @@ dotnet test --filter "FullyQualifiedName~OutputMatchesTheGoldMaster"
 # Run the tool against a directory of icons
 dotnet run --project IconHelper/IconHelper.csproj -- --input ./icons --output ./out
 
-# Publish a standalone executable
-dotnet publish IconHelper/IconHelper.csproj -c Release -o ./publish
+# Pack the tool package the way CI does: --no-build, solution context reconstructed by hand
+dotnet pack IconHelper/IconHelper.csproj -c Release --no-build --output ./pkg -p:SolutionDir="$PWD/" -p:SolutionName=IconHelper
+
+# Install the packed tool locally and run it. If the machine has NuGet package source mapping
+# configured, --add-source is rejected; point --configfile at a throwaway nuget.config instead.
+dotnet tool install ktsu.IconHelper --add-source ./pkg --tool-path ./toolpath
+./toolpath/iconhelper --input ./icons --output ./out
 ```
 
 ## Project Structure
 
-This is a .NET **console application** (`IconHelper`), not a library, and it is **not published to
-NuGet**. It batch-processes icon images: recolouring them to a single-colour silhouette, trimming
-transparent margins, squaring the canvas, and resizing to a maximum dimension.
+This is a .NET **console application** (`IconHelper`), not a library. It batch-processes icon
+images: recolouring them to a single-colour silhouette, trimming transparent margins, squaring the
+canvas, and resizing to a maximum dimension.
+
+It is distributed as a **dotnet tool**: package `ktsu.IconHelper`, command `iconhelper`. See
+[Distribution](#distribution) for what that constrains.
 
 The solution uses:
 
-- **ktsu.Sdk** + **ktsu.Sdk.App** - Custom SDKs providing shared build configuration for applications
-- Single target framework: `net9.0` (note `TargetFrameworks` is explicitly blanked in the csproj to
-  override the SDK's default multi-targeting)
+- **ktsu.Sdk** + **ktsu.Sdk.Tool** - Custom SDKs providing shared build configuration. The Tool SDK
+  is what makes this a dotnet tool rather than a plain executable
+- Single target framework: `net10.0`, set by `ktsu.Sdk.Tool`. Do not add a `TargetFramework` or
+  `TargetFrameworks` override to the csproj; the SDK already pins one and blanks the other
 - Central package management via `Directory.Packages.props`
 
 ### Key Files
@@ -153,8 +162,13 @@ Both are covered by regression tests. Do not reintroduce them.
 
 ## Testing
 
-`IconHelper.Test` is an MSTest project (`MSTest.Sdk`, Microsoft Testing Platform) targeting `net10.0`
-while the app targets `net9.0`. It reaches the app's `internal` members via `InternalsVisibleTo`.
+`IconHelper.Test` is an MSTest project (`MSTest.Sdk`, Microsoft Testing Platform). Both it and the
+app target `net10.0`. It reaches the app's `internal` members via `InternalsVisibleTo`.
+
+The gold master fixtures are stored in Git LFS (`.gitattributes` maps `*.png`). In a working copy
+where LFS objects have not been fetched they are pointer text, and every gold master test fails with
+ImageSharp's `UnknownImageFormatException`. That is a missing `git lfs pull`, not a pipeline
+regression.
 
 - `ArgumentsTests` - option defaults and the padding-versus-size validation rule
 - `ProcessImageTests` - the pixel pipeline in isolation: squaring, downscale-only clamping, trimming,
@@ -182,13 +196,63 @@ Then **review the image diff before committing**. Regenerating without looking d
 Keep the case list in `regenerate.ps1` in sync with `GoldMasterTests.Cases`. Two guard tests fail if
 a fixture or expectation is left unreferenced by either side.
 
+## Distribution
+
+The app ships as a dotnet tool and nothing else. `ktsu.Sdk.Tool` supplies the whole configuration,
+so the csproj stays declarative:
+
+| Value | Resolves to | Source |
+| --- | --- | --- |
+| `PackageId` | `ktsu.IconHelper` | `AssemblyName`, which the core SDK forces to `RootNamespace` |
+| `ToolCommandName` | `iconhelper` | lowercased `$(SolutionName)` |
+| `TargetFramework` | `net10.0` | `ktsu.Sdk.Tool`, single-target by necessity |
+| `PackAsTool` / `IsPackable` / `IsPublishable` | `true` | `ktsu.Sdk.Tool` |
+| `RuntimeIdentifiers` | empty | cleared by `ktsu.Sdk.Tool` |
+
+Three of those have sharp edges worth knowing before you touch the csproj:
+
+- **`RuntimeIdentifiers` must stay empty.** Under `PackAsTool` the .NET 10 SDK turns every entry in
+  that list into its own RID-specific tool package, so restoring the core SDK's seven-entry list
+  emits seven packages that race each other over one intermediate directory.
+- **`IsPublishable` must stay `true`.** `PackAsTool` builds the `tools/` payload from a publish.
+  With it false the package still contains a valid `DotnetToolSettings.xml` and none of the
+  assemblies it points at, so it installs cleanly and then fails at run time. Asserting the manifest
+  exists does not catch this; installing the tool and running it does.
+- **Never re-declare `TargetFrameworks`.** The csproj's own `PropertyGroup` is evaluated after the
+  SDK imports, so an override wins. `ktsu.Sdk.Tool` fails the build with `KTSU1001` if it is set.
+
+Packing requires `LICENSE.md`, `README.md` and `icon.png` in the solution directory, or pack fails
+NU5030/NU5039/NU5046. `icon.png` is the shared ktsu logo, identical across every ktsu repo, and it
+only exists here because the project packs. Do not delete it.
+
+There is deliberately no standalone, self-contained binary. The tool is framework-dependent and
+needs the .NET 10 runtime on the user's machine. Adding one back means a second
+`ktsu.Sdk.ConsoleApp` project alongside this one, not properties bolted onto this project.
+
+### How KtsuBuild treats this project
+
+KtsuBuild classifies projects by pattern-matching the **csproj text**, which is worth knowing
+because the results are counterintuitive:
+
+- `PackAsync` packs every non-test project with `--no-build`, reconstructing `SolutionDir` and
+  `SolutionName` on the command line because ktsu.Sdk derives package metadata from them. Packing a
+  previously built tool project with `--no-build` produces a complete payload.
+- `IsExecutableProject` matches `<OutputType>Exe|WinExe</OutputType>`, `Sdk="….App"` or `Sdk="….Ios"`
+  as literal text. This project uses the `<Sdk Name="…" />` element form and lets the SDK set
+  `OutputType`, so it matches none of them and is correctly skipped for RID zip publishing. That
+  exclusion is by project *selection*, not by any property on this project.
+- Packages go to GitHub Packages whenever a GitHub token is present, and additionally to nuget.org
+  when `NUGET_API_KEY` is set, which the workflow feeds from the `NUGET_KEY` repository secret. That
+  secret must exist or the package is published to GitHub Packages only.
+
 ## CI/CD
 
-GitHub Actions via `.github/workflows/dotnet.yml`. The pipeline clones the
-[KtsuBuild](https://github.com/ktsu-dev/KtsuBuild) repository at its latest tag and runs
-`KtsuBuild.CLI ci`. This repo does **not** contain a local `scripts/PSBuild.psm1`. The workflow also
-runs SonarQube Cloud analysis (when `SONAR_TOKEN` is set), generates winget manifests on release, and
-submits a dependency graph for security scanning.
+GitHub Actions via `.github/workflows/dotnet.yml`. The pipeline installs
+[KtsuBuild](https://github.com/ktsu-dev/KtsuBuild) as a dotnet tool
+(`dotnet tool install ktsu.KtsuBuild.Tool`) and drives the build with `ktsubuild test all`,
+`ktsubuild ci` and `ktsubuild release`. This repo does **not** contain a local `scripts/PSBuild.psm1`.
+The workflow also runs SonarQube Cloud analysis (when `SONAR_TOKEN` is set) and submits a dependency
+graph for security scanning.
 
 Version increments are controlled by commit message tags: `[major]`, `[minor]`, `[patch]`, `[pre]`.
 

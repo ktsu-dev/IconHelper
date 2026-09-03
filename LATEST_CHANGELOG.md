@@ -1,6 +1,6 @@
-## v1.4.18 (patch)
+## v1.4.19 (patch)
 
-Changes since v1.4.17:
+Changes since v1.4.18:
 
-- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Refactor build and distribution instructions in CLAUDE.md; update project SDKs in IconHelper.csproj; enhance README.md with installation details and usage examples; add icon.png for tool branding ([@matt-edmondson](https://github.com/matt-edmondson))
 

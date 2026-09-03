@@ -1,6 +1,7 @@
-## v1.4.19 (patch)
+## v1.4.20 (patch)
 
-Changes since v1.4.18:
+Changes since v1.4.19:
 
-- Refactor build and distribution instructions in CLAUDE.md; update project SDKs in IconHelper.csproj; enhance README.md with installation details and usage examples; add icon.png for tool branding ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump MSTest.Sdk from 4.3.3 to 4.4.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

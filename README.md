@@ -1,6 +1,6 @@
 # ktsu.IconHelper
 
-> A .NET command-line tool that batch-normalizes icon images by recoloring, trimming, squaring, and resizing them into consistent PNGs.
+> A .NET command-line tool that batch-normalizes icon images into flat single-colour coverage masks by recoloring, trimming, squaring, and resizing them into consistent PNGs.
 
 [![License](https://img.shields.io/github/license/ktsu-dev/IconHelper.svg?label=License&logo=nuget)](LICENSE.md)
 [![NuGet Version](https://img.shields.io/nuget/v/ktsu.IconHelper.svg?label=NuGet&logo=nuget)](https://www.nuget.org/packages/ktsu.IconHelper/)
@@ -14,8 +14,12 @@
 `ktsu.IconHelper` is a small console application for preparing icon sets. Icon packs downloaded from
 different sources rarely agree on colour, padding, or canvas size, which makes them look inconsistent
 when placed side by side in a UI. IconHelper takes a directory of images, converts each one to a
-monochrome silhouette tinted with a colour of your choosing, trims away the transparent margins,
-centres the artwork on a square canvas, and writes out a uniformly sized PNG.
+flat coverage mask in a colour of your choosing, trims away the transparent margins, centres the
+artwork on a square canvas, and writes out a uniformly sized PNG.
+
+"Coverage mask" is the important part: every pixel of the output carries the same colour, and the
+whole shape, anti-aliased edges included, lives in the alpha channel. Nothing in the result is a
+darker shade of the tint, so the icons composite cleanly over a background of any colour.
 
 It is built on [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp), so it runs anywhere
 .NET does and needs no native image libraries or platform-specific dependencies.
@@ -23,12 +27,12 @@ It is built on [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp), 
 ## Features
 
 - **Batch Processing**: Processes every file in an input directory in a single run
-- **Colour Tinting**: Flattens each image to a silhouette and tints it with any HTML/CSS colour value
-- **Automatic Trimming**: Detects the bounding box of non-transparent pixels and crops to it
+- **Coverage Output**: Flattens each image to a mask painted in one flat colour, with the shape carried entirely by the alpha channel
+- **Automatic Trimming**: Detects the bounding box of the pixels that end up visible and crops to it
 - **Square Centring**: Pads the trimmed artwork to a square canvas so icons align consistently
 - **Configurable Padding**: Insets the artwork by a fixed number of pixels per side without changing the output dimensions
 - **Downscale-Only Resizing**: Shrinks artwork to a maximum size but never upscales, so nothing is blurred
-- **Alpha Preservation**: Writes 8-bit RGBA PNGs with transparency intact
+- **Alpha Coverage**: Writes 8-bit RGBA PNGs whose alpha is the source transparency multiplied by the source brightness
 - **Resilient**: Reports and skips any file it cannot process, so one bad input never aborts the batch
 
 ## Installation
@@ -95,7 +99,8 @@ iconhelper -i ./icons -o ./out -c "#FF8800"
 # Three digit shorthand, equivalent to #FF8800
 iconhelper -i ./icons -o ./out -c "#F80"
 
-# Eight digit hex, with alpha
+# Eight digit hex. The alpha component is accepted but ignored, because the
+# alpha channel of the output is the coverage, not the colour's own opacity.
 iconhelper -i ./icons -o ./out -c "#FF8800AA"
 
 # Named colour
@@ -142,8 +147,8 @@ Done. 2 file(s) written, 1 failed.
 
 ## How It Works
 
-The whole design follows from one goal: reduce artwork of unknown origin to a single-colour
-silhouette without destroying the anti-aliased edges that make an icon look smooth at small sizes.
+The whole design follows from one goal: reduce artwork of unknown origin to a single-colour coverage
+mask without destroying the anti-aliased edges that make an icon look smooth at small sizes.
 A naive approach, thresholding to pure black and white and painting the result, produces jagged
 icons. Each stage below exists to avoid that.
 
@@ -180,15 +185,26 @@ against artwork that is mostly empty canvas, which most icons are.
 This has to be a separate pass, because the tint in stage 3 cannot start until the maximum for the
 whole image is known.
 
-### 3. Normalize, then tint
+### 3. Normalize, then merge the brightness into alpha
 
-A second pass lifts each pixel to full intensity and multiplies through by the target colour:
+A second pass normalizes each pixel to full intensity, folds that intensity into the alpha channel,
+and paints the colour channels flat:
 
 ```
 intensity = 255 - (maxValue - red)        // opaque pixels
 intensity = 0                             // transparent pixels
-channel   = intensity / 255 * targetChannel
+alpha     = sourceAlpha * intensity / 255
+channel   = targetChannel                 // every pixel, unmodulated
 ```
+
+This is what makes the output a coverage mask. Brightness and transparency are two ways of saying
+the same thing here, so they are merged into one: a half lit pixel comes out as the target colour at
+half alpha rather than as a half dark version of that colour. The colour channels carry no shape
+information at all.
+
+The practical difference is what the result composites over. A darkened edge pixel is only correct
+against the black it was implicitly matted against; the same pixel expressed as partial coverage is
+correct against any background.
 
 The normalization is an **offset rather than a scale**, and that choice matters. Adding
 `255 - maxValue` to every pixel raises the brightest opaque pixel to exactly 255 while preserving
@@ -200,20 +216,23 @@ Two details are load bearing:
 
 - **All-black artwork is special-cased.** If the brightest opaque pixel is still 0, the glyph is a
   solid black silhouette carrying its shape entirely in the alpha channel. Those pixels are forced
-  to full intensity, because normalizing them would resolve to intensity 0 and the icon would come
-  out invisible.
-- **Transparent pixels have their colour zeroed.** Whatever RGB the decoder left behind would
-  otherwise be blended outward by the resize in stage 5, producing a dark or off-colour halo around
-  the icon.
-
-Alpha is never modified, so the original transparency survives to the output.
+  to full intensity, because normalizing them would resolve to intensity 0, which now collapses the
+  alpha to 0 and the icon would come out fully transparent.
+- **The colour is painted flat everywhere, transparent pixels included.** Whatever RGB the decoder
+  left behind, and equally a zeroed one, gives the resize in stage 5 a different colour to blend
+  inward at the edges, which is what produces a dark or off-colour halo. A uniform colour field
+  cannot: every weighted average of a single colour is that colour.
 
 ### 4. Trim and square
 
-The same pass that tints also accumulates the bounding box of the non-transparent pixels, since it
-is already visiting every pixel. The image is cropped to that box, which discards whatever empty
+The same pass accumulates the bounding box of the pixels that ended up with non-zero coverage, since
+it is already visiting every pixel. The image is cropped to that box, which discards whatever empty
 margin the source had, then padded with transparency on the shorter axis to make it square. Padding
 rather than stretching keeps the artwork's aspect ratio intact and centres it.
+
+The bounds are measured against the merged alpha rather than the source alpha. An opaque but unlit
+region contributes nothing visible once brightness has become coverage, so including it would pad
+the canvas out around artwork that is no longer there.
 
 The bounds are inclusive indices, so the width is `right - left + 1`. Dropping that `+ 1` costs the
 rightmost column and bottom row of every icon.
@@ -270,7 +289,11 @@ for how many succeeded.
   Vector formats such as SVG are not supported.
 - The tool only ever shrinks artwork. Passing a `--size` larger than the source icon leaves it at its
   original size.
-- Colour information in the source is discarded, so every icon becomes a single-colour silhouette.
+- Colour information in the source is discarded, so every icon becomes a single flat colour.
+- Source brightness becomes transparency rather than a darker colour. A region that flattens to
+  black is fully transparent in the output and falls outside the crop, instead of appearing as an
+  opaque black patch. Artwork whose brightest pixel is dim therefore produces a mask that is
+  translucent throughout, since the normalization has only that pixel to scale against.
 - Every failure is reported and skipped, so the run always continues to the end and exits with
   code `2` if anything failed.
 

@@ -165,19 +165,107 @@ public class ProcessImageTests
 	}
 
 	[TestMethod]
-	public void NormalizesMidtoneArtworkUpToFullIntensity()
+	public void NormalizesMidtoneArtworkUpToFullCoverage()
 	{
-		// A mid-grey of 80 lands inside the BlackWhite ramp, so maxValue ends up strictly
+		// A mid-grey of 80 lands inside the BlackWhite ramp at 105, so maxValue ends up strictly
 		// between 0 and 255 and the offset normalization has to lift it back to full intensity.
+		// Since intensity is now what drives alpha, "full intensity" means "fully covered".
 		using Image<Rgba32> image = TestImages.Blank(80, 80);
 		TestImages.FillRect(image, 20, 20, 40, 40, new Rgba32(80, 80, 80, 255));
 
 		IconHelper.ProcessImage(image, Color.FromBytes(200, 100, 50), 40, 0);
 
-		Rgba32 brightest = TestImages.BrightestOpaquePixel(image);
-		Assert.AreEqual(200, brightest.R, "The brightest opaque pixel should reach the target colour exactly.");
-		Assert.AreEqual(100, brightest.G);
-		Assert.AreEqual(50, brightest.B);
+		Rgba32 centre = image[20, 20];
+		Assert.AreEqual(255, centre.A, "The brightest opaque pixel should reach full coverage.");
+		Assert.AreEqual(200, centre.R, "The colour channels carry the target colour flat.");
+		Assert.AreEqual(100, centre.G);
+		Assert.AreEqual(50, centre.B);
+	}
+
+	[TestMethod]
+	public void FoldsBrightnessIntoTheAlphaChannel()
+	{
+		// The core of the coverage output. A white patch and a mid-grey patch are equally opaque in
+		// the source, so under the old tint they differed only in how dark the colour came out.
+		// Now they differ in alpha instead, and the colour is identical across both.
+		//
+		// The grey of 80 passes through the BlackWhite ramp to 105, and the white patch pins
+		// maxValue at 255, so the grey normalizes to 105 and 255 * 105 / 255 is 105 of coverage.
+		using Image<Rgba32> image = TestImages.Blank(80, 80);
+		TestImages.FillRect(image, 10, 10, 20, 20, OpaqueWhite);
+		TestImages.FillRect(image, 40, 40, 20, 20, new Rgba32(80, 80, 80, 255));
+
+		IconHelper.ProcessImage(image, Color.FromBytes(200, 100, 50), 512, 0);
+
+		// The crop covers both patches, so the white one starts at (0,0) and the grey at (30,30).
+		Rgba32 white = image[5, 5];
+		Rgba32 grey = image[35, 35];
+
+		Assert.AreEqual(255, white.A, "A fully lit pixel should be fully covered.");
+		Assert.AreEqual(105, grey.A, "A midtone pixel should become partial coverage, not a darker colour.");
+
+		foreach (Rgba32 pixel in new[] { white, grey })
+		{
+			Assert.AreEqual(200, pixel.R, "Brightness must not survive in the colour channels.");
+			Assert.AreEqual(100, pixel.G);
+			Assert.AreEqual(50, pixel.B);
+		}
+	}
+
+	[TestMethod]
+	public void MultipliesSourceAlphaIntoTheCoverage()
+	{
+		// Coverage is the product of brightness and the source alpha, so a half transparent white
+		// pixel is half covered even though it is at full brightness.
+		using Image<Rgba32> image = TestImages.Blank(80, 80);
+		TestImages.FillRect(image, 10, 10, 20, 20, OpaqueWhite);
+		TestImages.FillRect(image, 10, 10, 20, 10, new Rgba32(255, 255, 255, 128));
+
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 128, 255), 512, 0);
+
+		Assert.AreEqual(128, image[5, 5].A, "Source alpha should carry through into the coverage.");
+		Assert.AreEqual(255, image[5, 15].A, "The fully opaque half is unaffected.");
+	}
+
+	[TestMethod]
+	public void DropsUnlitArtworkFromTheCoverage()
+	{
+		// A black region sitting alongside a white one normalizes to intensity 0, which is now zero
+		// coverage rather than an opaque black patch. It must therefore also fall outside the crop,
+		// or the canvas would be padded out around artwork that is no longer visible.
+		using Image<Rgba32> image = TestImages.Blank(80, 80);
+		TestImages.FillRect(image, 10, 10, 20, 20, OpaqueWhite);
+		TestImages.FillRect(image, 10, 40, 20, 20, OpaqueBlack);
+
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 255, 0), 512, 0);
+
+		Assert.AreEqual(20, image.Width, "The crop should ignore the unlit region entirely.");
+		Assert.AreEqual(20, image.Height);
+		Assert.AreEqual(255, image[5, 5].A, "The lit region survives at full coverage.");
+	}
+
+	[TestMethod]
+	public void PaintsEveryPixelTheFlatTargetColour()
+	{
+		// Nothing in the output may modulate the colour channels: whatever the source tones were,
+		// every pixel comes out as exactly the target colour, with the shape only in the alpha.
+		using Image<Rgba32> image = TestImages.Blank(80, 80);
+		TestImages.FillRect(image, 10, 10, 30, 30, new Rgba32(255, 255, 255, 255));
+		TestImages.FillRect(image, 20, 20, 30, 30, new Rgba32(80, 80, 80, 255));
+		TestImages.FillRect(image, 30, 30, 20, 20, new Rgba32(96, 96, 96, 255));
+
+		IconHelper.ProcessImage(image, Color.FromBytes(200, 100, 50), 512, 0);
+
+		for (int y = 0; y < image.Height; y++)
+		{
+			for (int x = 0; x < image.Width; x++)
+			{
+				Rgba32 pixel = image[x, y];
+				Assert.AreEqual(200, pixel.R, $"Pixel ({x},{y}) does not carry the flat target colour.");
+				Assert.AreEqual(100, pixel.G, $"Pixel ({x},{y}) does not carry the flat target colour.");
+				Assert.AreEqual(50, pixel.B, $"Pixel ({x},{y}) does not carry the flat target colour.");
+			}
+		}
 	}
 
 	[TestMethod]
@@ -189,7 +277,7 @@ public class ProcessImageTests
 
 		IconHelper.ProcessImage(image, Color.FromBytes(0, 0, 255), 60, 0);
 
-		// Tinting with pure blue means no pixel may carry any red or green at all,
+		// Painting with pure blue means no pixel may carry any red or green at all,
 		// regardless of what colour it started as.
 		for (int y = 0; y < image.Height; y++)
 		{

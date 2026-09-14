@@ -1,1 +1,1 @@
-.NET;C#;dotnet;csharp;icon;icons;icon processing;image processing;batch processing;cli;command line;tool;recolor;tint;silhouette;crop;trim;resize;padding;png;transparency;alpha;imagesharp;sixlabors;graphics
+.NET;C#;dotnet;csharp;icon;icons;icon processing;image processing;batch processing;cli;command line;tool;recolor;tint;silhouette;coverage mask;alpha mask;crop;trim;resize;padding;png;transparency;alpha;imagesharp;sixlabors;graphics

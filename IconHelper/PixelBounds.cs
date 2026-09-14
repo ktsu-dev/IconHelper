@@ -3,16 +3,16 @@
 namespace ktsu.IconHelper;
 
 /// <summary>
-/// The bounding box of the non transparent pixels in an image, in inclusive pixel indices.
+/// The bounding box of the visible pixels in an image, in inclusive pixel indices.
 /// </summary>
-/// <param name="Left">Index of the leftmost column containing an opaque pixel.</param>
-/// <param name="Top">Index of the topmost row containing an opaque pixel.</param>
-/// <param name="Right">Index of the rightmost column containing an opaque pixel.</param>
-/// <param name="Bottom">Index of the bottommost row containing an opaque pixel.</param>
+/// <param name="Left">Index of the leftmost column containing a visible pixel.</param>
+/// <param name="Top">Index of the topmost row containing a visible pixel.</param>
+/// <param name="Right">Index of the rightmost column containing a visible pixel.</param>
+/// <param name="Bottom">Index of the bottommost row containing a visible pixel.</param>
 internal readonly record struct PixelBounds(int Left, int Top, int Right, int Bottom)
 {
 	/// <summary>
-	/// True when the image contained no opaque pixel at all. The bounds are seeded inverted, so
+	/// True when the image contained no visible pixel at all. The bounds are seeded inverted, so
 	/// nothing having widened them leaves them that way.
 	/// </summary>
 	internal bool IsEmpty => Right < Left || Bottom < Top;

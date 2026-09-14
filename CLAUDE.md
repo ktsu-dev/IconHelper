@@ -31,7 +31,7 @@ dotnet tool install ktsu.IconHelper --add-source ./pkg --tool-path ./toolpath
 ## Project Structure
 
 This is a .NET **console application** (`IconHelper`), not a library. It batch-processes icon
-images: recolouring them to a single-colour silhouette, trimming transparent margins, squaring the
+images: reducing them to a single-colour coverage mask, trimming transparent margins, squaring the
 canvas, and resizing to a maximum dimension.
 
 It is distributed as a **dotnet tool**: package `ktsu.IconHelper`, command `iconhelper`. See
@@ -77,18 +77,26 @@ The program is a single-pass batch processor with no abstraction layers, which i
 
 ```
 Parse args → Validate → enumerate input dir → per file:
-  Load<Rgba32> → BlackWhite() → find max opaque luminance → tint by colour
-  → crop to alpha bounding box → pad to square → resize → pad to final size → SaveAsPng
+  Load<Rgba32> → BlackWhite() → find max opaque luminance → fold brightness into alpha and
+  paint the colour flat → crop to coverage bounding box → pad to square → resize
+  → pad to final size → SaveAsPng
 ```
 
-The recolouring algorithm is documented step-by-step in inline comments in `IconHelper.cs`. Read
-those before changing the pixel maths. Two details in particular:
+The coverage algorithm is documented step-by-step in inline comments in `IconHelper.cs`. Read
+those before changing the pixel maths. Three details in particular:
 
+- **The output is a coverage mask, not a tinted silhouette.** Every pixel's RGB is the target colour
+  flat, transparent pixels included, and the normalized brightness is multiplied into the alpha
+  instead (`alpha = sourceAlpha * intensity / 255`). Source brightness therefore becomes
+  transparency, not a darker colour. A region that flattens to black comes out fully transparent and
+  is excluded from the bounding box rather than cropped around. Painting the colour into transparent
+  pixels too is deliberate: a uniform colour field gives `Resize` nothing to blend inward at the
+  edges, which is what used to produce the halo that zeroing them was guarding against.
 - **Two `ProcessPixelRows` passes.** The first finds the brightest opaque pixel (`maxValue`). The
-  second applies the tint *and* accumulates the alpha bounding box. They cannot be merged, because
-  the tint depends on `maxValue` being known up front.
+  second applies the coverage *and* accumulates the bounding box. They cannot be merged, because the
+  normalization depends on `maxValue` being known up front.
 - **The all-black special case.** If `maxValue == 0` every opaque pixel is treated as full intensity.
-  Without this, solid black glyphs would tint to black and appear blank.
+  Without this, solid black glyphs would resolve to zero coverage and come out fully transparent.
 
 Sizing is deliberately downscale-only: `finalSize = Math.Min(trimmedSquareSize, args.Size)`. Padding
 is applied by shrinking the *content* (`finalSize - padding * 2`) and padding back out, so the output
@@ -117,7 +125,8 @@ Paths and colours are semantic types rather than strings.
 - Semantic strings define an implicit conversion to `string`, so pass them straight to BCL APIs
   rather than calling `ToString()`.
 - `ColorParser.TryParse` accepts a `NamedColors` name or a hex value. `Color` stores **linear**
-  channels as doubles, so `ProcessImage` calls `ToBytes()` once up front rather than per pixel.
+  channels as doubles, so `ProcessImage` calls `ToBytes()` once up front rather than per pixel. The
+  alpha component of an `#RRGGBBAA` colour is discarded, since alpha is what carries the coverage.
   `FromHex(...).ToBytes()` round-trips byte for byte, which is why swapping the parser left every
   gold master unchanged.
 
@@ -172,8 +181,9 @@ regression.
 
 - `ArgumentsTests` - option defaults and the padding-versus-size validation rule
 - `ProcessImageTests` - the pixel pipeline in isolation: squaring, downscale-only clamping, trimming,
-  tinting, the all-black branch, midtone normalization, colour flattening, padding and the blank
-  image case
+  colouring, the all-black branch, midtone normalization, the brightness-into-alpha merge, source
+  alpha multiplying through, unlit regions dropping out of the crop, colour flattening, padding and
+  the blank image case
 - `ProcessDirectoryTests` - the I/O layer: output directory creation, `.png` extension rewriting,
   `.new.png` skipping, per-file error recovery for both decode failures and locked files, the
   written and failed counts, and the PNG encoder settings

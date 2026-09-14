@@ -152,8 +152,9 @@ internal static class IconHelper
 	}
 
 	/// <summary>
-	/// Recolours an icon to a flat silhouette in the target colour, trims its transparent margins,
-	/// centres it on a square canvas and scales it down to at most <paramref name="size"/> pixels.
+	/// Reduces an icon to a coverage mask: every pixel carries the flat target colour and the shape
+	/// lives entirely in the alpha channel. The result is trimmed of its transparent margins, centred
+	/// on a square canvas and scaled down to at most <paramref name="size"/> pixels.
 	/// The image is mutated in place.
 	/// </summary>
 	internal static void ProcessImage(Image<Rgba32> image, Color color, int size, int padding)
@@ -161,14 +162,20 @@ internal static class IconHelper
 		Ensure.NotNull(image);
 
 		// The semantic Color stores linear channels as doubles. Encode to sRGB bytes once here rather
-		// than per pixel, both for speed and so the tint below stays plain byte arithmetic.
+		// than per pixel, both for speed and so the pass below stays plain byte arithmetic.
 		(byte colorR, byte colorG, byte colorB, byte _) = color.ToBytes();
 
-		// RECOLOURING ALGORITHM
+		// COVERAGE ALGORITHM
 		//
-		// Turns an arbitrary icon into a flat silhouette painted in a single target colour,
-		// while keeping the anti-aliased edges smooth: flatten to greyscale, normalize the
-		// brightness, then multiply through by the colour.
+		// Turns an arbitrary icon into a coverage mask painted in a single target colour:
+		// flatten to greyscale, normalize the brightness, then fold that brightness into the
+		// alpha channel while the colour channels are painted flat.
+		//
+		// The colour channels therefore carry no shape information at all. A pixel that used to
+		// come out as a dark shade of the target colour now comes out as the target colour at a
+		// proportionally lower alpha, so anti-aliased edges survive as partial coverage rather
+		// than as darkening. That is what lets the output composite correctly over any background
+		// instead of only over the black it was previously matted against.
 		//
 		// Flatten to greyscale. ImageSharp's BlackWhite filter is a colour matrix
 		// (KnownFilterMatrices.BlackWhiteFilter) whose red, green and blue rows are all
@@ -185,8 +192,8 @@ internal static class IconHelper
 		// clamps to black at v <= 2/9 (~0.222) and to white at v >= 4/9 (~0.444). The output
 		// is therefore near-binary: most pixels land on pure black or pure white, with only a
 		// narrow band of true midtones along anti-aliased edges. Those midtones are exactly
-		// what the normalization and tint below preserve, and they are the reason maxValue is
-		// already 255 for most real icons.
+		// what the normalization below turns into partial coverage, and they are the reason
+		// maxValue is already 255 for most real icons.
 		//
 		// Note the filter has no alpha awareness beyond passing alpha through, so it also
 		// rewrites the colour channels of fully transparent pixels (see the maximum
@@ -198,17 +205,17 @@ internal static class IconHelper
 		// Handle the all-black glyph case. A maxValue of 0 means every opaque pixel is pure
 		// black, a solid silhouette carrying its shape entirely in the alpha channel.
 		// The isBlack flag forces those pixels to full intensity in the pass below so the
-		// glyph takes the target colour. Without it the normalization would resolve to
-		// intensity 0 and the icon would come out invisible.
+		// glyph takes full coverage. Without it the normalization would resolve to intensity
+		// 0, which now collapses the alpha to 0 and the icon would come out fully transparent.
 		bool isBlack = maxValue == 0;
 
-		PixelBounds bounds = TintAndMeasureBounds(image, maxValue, isBlack, colorR, colorG, colorB);
+		PixelBounds bounds = FlattenToCoverageAndMeasureBounds(image, maxValue, isBlack, colorR, colorG, colorB);
 
 		if (bounds.IsEmpty)
 		{
 			// No artwork to crop around, so emit an empty square rather than trying to measure one.
 			// The side comes from the source canvas so the downscale-only rule still applies, and
-			// every pixel is already rgba(0,0,0,0) by now, so resizing keeps it fully transparent.
+			// every pixel already has an alpha of 0 by now, so resizing keeps it fully transparent.
 			int blankSize = Math.Min(Math.Max(image.Width, image.Height), size);
 			image.Mutate(x => x.Resize(blankSize, blankSize));
 			return;
@@ -247,11 +254,39 @@ internal static class IconHelper
 	}
 
 	/// <summary>
-	/// Normalizes the brightness and multiplies through by the target colour, returning the bounding
-	/// box of the visible artwork. The two are done in one pass because it is already walking every
-	/// pixel, and the crop needs those bounds to trim the transparent margins.
+	/// The normalized brightness of a single pixel, which is what the coverage is scaled by.
 	/// </summary>
-	private static PixelBounds TintAndMeasureBounds(
+	private static byte NormalizedIntensity(Rgba32 pixel, byte maxValue, bool isBlack)
+	{
+		if (pixel.A == 0)
+		{
+			// Transparent pixels are pinned to 0 rather than normalized. maxValue was sampled from
+			// opaque pixels only, so a transparent pixel whose R exceeds it would underflow the
+			// subtraction below and wrap around to a bright value.
+			return 0;
+		}
+
+		if (isBlack)
+		{
+			// Every opaque pixel is pure black, so there is no tonal range to normalize against and
+			// they all take full intensity. See the isBlack comment in ProcessImage.
+			return 255;
+		}
+
+		// Normalize by *offset*, not by scale: adding (255 - maxValue) to every pixel lifts the
+		// brightest opaque pixel to exactly 255 while preserving the absolute differences between
+		// tones, so anti-aliased edges keep their gradient instead of being stretched apart. A
+		// source whose brightest pixel is already 255 passes through unchanged.
+		return (byte)(255 - (maxValue - pixel.R));
+	}
+
+	/// <summary>
+	/// Paints the flat target colour across every pixel and folds the normalized brightness into the
+	/// alpha channel, returning the bounding box of the visible artwork. The two are done in one pass
+	/// because it is already walking every pixel, and the crop needs those bounds to trim the
+	/// transparent margins.
+	/// </summary>
+	private static PixelBounds FlattenToCoverageAndMeasureBounds(
 		Image<Rgba32> image,
 		byte maxValue,
 		bool isBlack,
@@ -259,7 +294,7 @@ internal static class IconHelper
 		byte colorG,
 		byte colorB)
 	{
-		// Seeded inverted, so an image with nothing opaque in it leaves them that way and reports
+		// Seeded inverted, so an image with nothing visible in it leaves them that way and reports
 		// itself as empty.
 		int top = image.Height;
 		int left = image.Width;
@@ -276,37 +311,35 @@ internal static class IconHelper
 				{
 					ref Rgba32 pixel = ref pixelRow[x];
 
-					// Normalize by *offset*, not by scale: adding (255 - maxValue) to every
-					// pixel lifts the brightest opaque pixel to exactly 255 while preserving
-					// the absolute differences between tones, so anti-aliased edges keep
-					// their gradient instead of being stretched apart. A source whose
-					// brightest pixel is already 255 passes through unchanged.
-					byte newValue = (byte)(isBlack ? 255 : 255 - (maxValue - pixel.R));
-					if (pixel.A != 0)
+					byte intensity = NormalizedIntensity(pixel, maxValue, isBlack);
+
+					// Merge the brightness into the alpha. Coverage is the product of the two,
+					// so a half-lit pixel at full alpha and a fully lit pixel at half alpha both
+					// describe half coverage. Integer arithmetic throughout, so a fully lit,
+					// fully opaque pixel lands back on exactly 255 rather than a float rounding
+					// of it.
+					byte coverage = (byte)(pixel.A * intensity / 255);
+
+					// Measure the bounds against the *merged* alpha, not the source alpha. An
+					// opaque but unlit pixel now contributes nothing visible, so including it
+					// would pad the crop out around artwork that is not there.
+					if (coverage != 0)
 					{
 						left = Math.Min(left, x);
 						top = Math.Min(top, y);
 						right = Math.Max(right, x);
 						bottom = Math.Max(bottom, y);
 					}
-					else
-					{
-						// Zero the colour of fully transparent pixels. Without this they keep
-						// whatever RGB the decoder left behind, and the Resize below blends
-						// that hidden colour into neighbouring pixels, producing a dark or
-						// off-colour halo around the icon. This also discards the overflowed
-						// newValue computed above for transparent pixels whose R exceeded
-						// maxValue (which was sampled from opaque pixels only).
-						newValue = 0;
-					}
 
-					// Multiply the target colour by the normalized intensity. Intensity 255
-					// yields the colour exactly, intermediate values yield proportionally
-					// darker shades of it, which is what keeps edges anti-aliased. Alpha is
-					// deliberately left alone so the original transparency is preserved.
-					pixel.R = (byte)(newValue / 255f * colorR);
-					pixel.G = (byte)(newValue / 255f * colorG);
-					pixel.B = (byte)(newValue / 255f * colorB);
+					// Paint the target colour flat, transparent pixels included. Whatever RGB the
+					// decoder left in a transparent pixel, and equally a zeroed one, gives the
+					// Resize below a different colour to blend inward at the edges, which is what
+					// produces a dark or off-colour halo. A uniform colour field cannot: every
+					// weighted average of one colour is that colour.
+					pixel.R = colorR;
+					pixel.G = colorG;
+					pixel.B = colorB;
+					pixel.A = coverage;
 				}
 			}
 		});

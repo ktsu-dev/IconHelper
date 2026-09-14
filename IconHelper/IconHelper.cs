@@ -254,6 +254,33 @@ internal static class IconHelper
 	}
 
 	/// <summary>
+	/// The normalized brightness of a single pixel, which is what the coverage is scaled by.
+	/// </summary>
+	private static byte NormalizedIntensity(Rgba32 pixel, byte maxValue, bool isBlack)
+	{
+		if (pixel.A == 0)
+		{
+			// Transparent pixels are pinned to 0 rather than normalized. maxValue was sampled from
+			// opaque pixels only, so a transparent pixel whose R exceeds it would underflow the
+			// subtraction below and wrap around to a bright value.
+			return 0;
+		}
+
+		if (isBlack)
+		{
+			// Every opaque pixel is pure black, so there is no tonal range to normalize against and
+			// they all take full intensity. See the isBlack comment in ProcessImage.
+			return 255;
+		}
+
+		// Normalize by *offset*, not by scale: adding (255 - maxValue) to every pixel lifts the
+		// brightest opaque pixel to exactly 255 while preserving the absolute differences between
+		// tones, so anti-aliased edges keep their gradient instead of being stretched apart. A
+		// source whose brightest pixel is already 255 passes through unchanged.
+		return (byte)(255 - (maxValue - pixel.R));
+	}
+
+	/// <summary>
 	/// Paints the flat target colour across every pixel and folds the normalized brightness into the
 	/// alpha channel, returning the bounding box of the visible artwork. The two are done in one pass
 	/// because it is already walking every pixel, and the crop needs those bounds to trim the
@@ -284,18 +311,7 @@ internal static class IconHelper
 				{
 					ref Rgba32 pixel = ref pixelRow[x];
 
-					// Normalize by *offset*, not by scale: adding (255 - maxValue) to every
-					// pixel lifts the brightest opaque pixel to exactly 255 while preserving
-					// the absolute differences between tones, so anti-aliased edges keep
-					// their gradient instead of being stretched apart. A source whose
-					// brightest pixel is already 255 passes through unchanged.
-					//
-					// Transparent pixels are pinned to 0 rather than normalized. maxValue was
-					// sampled from opaque pixels only, so a transparent pixel whose R exceeds it
-					// would underflow the subtraction and wrap around to a bright value.
-					byte intensity = pixel.A == 0
-						? (byte)0
-						: (byte)(isBlack ? 255 : 255 - (maxValue - pixel.R));
+					byte intensity = NormalizedIntensity(pixel, maxValue, isBlack);
 
 					// Merge the brightness into the alpha. Coverage is the product of the two,
 					// so a half-lit pixel at full alpha and a fully lit pixel at half alpha both

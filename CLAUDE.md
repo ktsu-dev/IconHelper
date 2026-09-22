@@ -100,7 +100,9 @@ those before changing the pixel maths. Three details in particular:
 
 Sizing is deliberately downscale-only: `finalSize = Math.Min(trimmedSquareSize, args.Size)`. Padding
 is applied by shrinking the *content* (`finalSize - padding * 2`) and padding back out, so the output
-canvas is always `finalSize` square regardless of padding.
+canvas is always `finalSize` square regardless of padding. The padding is first clamped against
+`finalSize` by `EffectivePadding`, because `Validate` can only check it against `args.Size` and the
+two differ whenever the artwork downscales. See the fixed bugs below.
 
 Files containing `.new.png` in their name are skipped, so re-running over an output directory is safe.
 
@@ -168,6 +170,16 @@ Both are covered by regression tests. Do not reintroduce them.
   detects the inverted bounds and emits an empty square instead. Pinned by
   `ProcessImageTests.ProducesATransparentSquareWhenTheArtworkHasNoOpaquePixels` and
   `ProcessDirectoryTests.AFullyTransparentFileDoesNotStopTheBatch`.
+- **Padding validated against the wrong size.** `Validate` checks `padding < size / 2`, but the
+  canvas is `min(trimmedSquareSize, size)`. Artwork trimming smaller than `--size` therefore got a
+  canvas the validated padding did not fit on, driving the content size to zero or negative, and
+  `Resize` threw. The broad per-file catch turned that into a silently failed file and exit code 2
+  on a batch the user had configured exactly as documented. `EffectivePadding` now clamps to
+  `(finalSize - 1) / 2`. Pinned by
+  `ProcessImageTests.PaddingValidAgainstTheRequestedSizeStillWorksOnSmallerArtwork`,
+  `PaddingTooLargeForTheCanvasStillLeavesVisibleContent`,
+  `PaddingThatFitsIsAppliedExactlyAndNotClamped` and
+  `ProcessDirectoryTests.SmallArtworkWithValidatedPaddingDoesNotFailTheBatch`.
 
 ## Testing
 

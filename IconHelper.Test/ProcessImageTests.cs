@@ -316,6 +316,53 @@ public class ProcessImageTests
 	}
 
 	[TestMethod]
+	public void PaddingValidAgainstTheRequestedSizeStillWorksOnSmallerArtwork()
+	{
+		// Regression test. Arguments.Validate only checks padding against --size, but the canvas
+		// actually used is min(trimmedSquareSize, size) because sizing is downscale-only. Artwork
+		// that trims smaller than --size therefore gets a canvas the validated padding does not fit
+		// on: here 45 < 100/2 validates, but the real canvas is 80, so the content size used to come
+		// out as 80 - 90 = -10 and Resize threw.
+		using Image<Rgba32> image = TestImages.Blank(200, 200);
+		TestImages.FillRect(image, 10, 10, 80, 80, OpaqueWhite);
+
+		IconHelper.ProcessImage(image, NamedColors.White, 100, 45);
+
+		Assert.AreEqual(80, image.Width, "The downscale-only canvas is unchanged by the padding clamp.");
+		Assert.AreEqual(80, image.Height);
+	}
+
+	[TestMethod]
+	public void PaddingTooLargeForTheCanvasStillLeavesVisibleContent()
+	{
+		// The clamp has to leave at least one pixel of content: a canvas padded to nothing would be
+		// a silently blank icon, which is no better than the throw it replaces.
+		using Image<Rgba32> image = TestImages.Blank(200, 200);
+		TestImages.FillRect(image, 10, 10, 80, 80, OpaqueWhite);
+
+		IconHelper.ProcessImage(image, NamedColors.White, 100, 45);
+
+		Assert.AreEqual(255, image[40, 40].A, "The centre of the canvas should still carry artwork.");
+		Assert.AreEqual(0, image[0, 0].A, "The clamped padding should still inset the artwork.");
+	}
+
+	[TestMethod]
+	public void PaddingThatFitsIsAppliedExactlyAndNotClamped()
+	{
+		// The guard against the clamp reaching inputs that were always valid. 8 fits on the 80 pixel
+		// canvas, so the content must be inset by exactly 8 per side and no more: pixel 7 is padding
+		// and pixel 8 is the first row of artwork.
+		using Image<Rgba32> image = TestImages.Blank(200, 200);
+		TestImages.FillRect(image, 10, 10, 80, 80, OpaqueWhite);
+
+		IconHelper.ProcessImage(image, NamedColors.White, 100, 8);
+
+		Assert.AreEqual(80, image.Width);
+		Assert.AreEqual(0, image[7, 40].A, "The last padding column should be transparent.");
+		Assert.AreEqual(255, image[8, 40].A, "The artwork should start exactly at the padding offset.");
+	}
+
+	[TestMethod]
 	public void PreservesTransparencyOfTheSourceArtwork()
 	{
 		// A shape with a transparent notch cut out of it keeps that hole after processing.

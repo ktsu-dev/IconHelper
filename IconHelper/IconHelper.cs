@@ -350,7 +350,8 @@ internal static class IconHelper
 	/// <summary>
 	/// Crops to the artwork, squares it off, and scales it down to at most
 	/// <paramref name="size"/> pixels, insetting the content by <paramref name="padding"/> per side
-	/// without changing the final canvas size.
+	/// without changing the final canvas size. The padding is clamped to what the canvas can carry,
+	/// see <see cref="EffectivePadding"/>.
 	/// </summary>
 	private static void CropSquareAndResize(Image<Rgba32> image, PixelBounds bounds, int size, int padding)
 	{
@@ -358,7 +359,7 @@ internal static class IconHelper
 
 		// We intentionally only shrink the image and not grow it
 		int finalSize = Math.Min(newSize, size);
-		int finalContentSize = finalSize - (padding * 2);
+		int finalContentSize = finalSize - (EffectivePadding(finalSize, padding) * 2);
 		Rgba32 paddingColor = Rgba32.ParseHex("00000000");
 
 		image.Mutate(x => x
@@ -373,4 +374,27 @@ internal static class IconHelper
 			.Resize(finalContentSize, finalContentSize)
 			.Pad(finalSize, finalSize, paddingColor));
 	}
+
+	/// <summary>
+	/// The padding actually applied to a canvas of <paramref name="canvasSize"/> pixels, clamped so
+	/// that at least one pixel of content survives.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// <see cref="Arguments.Validate"/> checks the requested padding against <c>--size</c>, but
+	/// sizing is downscale-only, so the canvas is <c>min(trimmedSquareSize, size)</c>. Artwork that
+	/// trims smaller than <c>--size</c> gets a canvas the validated padding need not fit on:
+	/// <c>--size 100 --padding 45</c> validates, and then artwork trimming to 80 square asks for 90
+	/// pixels of padding on an 80 pixel canvas. That drove the content size to zero or negative and
+	/// <c>Resize</c> threw, costing that file in a batch the user had configured correctly.
+	/// </para>
+	/// <para>
+	/// Clamping is preferred over reporting the file as failed because the requested padding is not
+	/// wrong, it is only unsatisfiable on this particular input, and a batch of assorted icon sizes
+	/// would otherwise fail exactly the small ones. Every padding that already fits is applied
+	/// unchanged, so this only engages where the tool used to throw.
+	/// </para>
+	/// </remarks>
+	private static int EffectivePadding(int canvasSize, int padding)
+		=> Math.Min(padding, (canvasSize - 1) / 2);
 }

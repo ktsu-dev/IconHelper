@@ -1,6 +1,6 @@
-## v1.5.8 (patch)
+## v1.5.9 (patch)
 
-Changes since v1.5.7:
+Changes since v1.5.8:
 
-- Clamp padding to the canvas the artwork actually gets [patch] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 10 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

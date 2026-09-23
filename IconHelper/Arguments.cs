@@ -24,7 +24,7 @@ internal sealed class Arguments
 	[Option('s', "size", Required = false, HelpText = "The maximum size of the icon. Defaults to 128.")]
 	public int Size { get; set; } = 128;
 
-	[Option('p', "padding", Required = false, HelpText = "The number of pixels per size to pad the output image. Must be < (size / 2). Will not change the output size. Defaults to 0.")]
+	[Option('p', "padding", Required = false, HelpText = "The number of pixels per side to pad the output image. Must be < (size / 2), and is clamped further on artwork that downscales to less than size. Will not change the output size. Defaults to 0.")]
 	public int Padding { get; set; } = 0;
 
 	internal bool Validate(out Collection<string> errors)

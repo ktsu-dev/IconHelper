@@ -272,4 +272,31 @@ public class ProcessDirectoryTests
 		Assert.AreEqual(PngBitDepth.Bit8, png.BitDepth);
 		Assert.AreEqual(PngColorType.RgbWithAlpha, png.ColorType);
 	}
+
+	[TestMethod]
+	public void SmallArtworkWithValidatedPaddingDoesNotFailTheBatch()
+	{
+		// The whole failure scenario end to end, at the layer where it actually cost the user
+		// something. `--size 100 --padding 45` passes Validate, but WritePng's artwork covers only
+		// the middle half of its canvas, so a 160 pixel file trims to 80 and the padding did not fit
+		// the effective canvas. Resize threw, the broad per-file catch swallowed it, and the file was
+		// counted as failed, taking an otherwise correct run to exit code 2.
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Combine(input, "small.png"), 160);
+
+		Arguments args = ArgumentsFor(input, output);
+		args.Size = 100;
+		args.Padding = 45;
+
+		Assert.IsTrue(args.Validate(out _), "Precondition: these are the documented, valid arguments.");
+
+		BatchResult result = IconHelper.ProcessDirectory(args, NamedColors.White);
+
+		Assert.AreEqual(0, result.Failed, "Arguments that validate must not fail a file.");
+		Assert.AreEqual(1, result.Written);
+		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(result));
+	}
 }

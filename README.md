@@ -247,6 +247,12 @@ the artwork leaves it alone.
 `finalSize - padding * 2` and then padded back out to `finalSize`, so the output is always
 `finalSize` square whatever the padding.
 
+Because the canvas is `min(squareSize, --size)` rather than `--size`, the padding is measured against
+that effective canvas and **clamped to `(finalSize - 1) / 2`** so at least one pixel of content
+survives. This only engages on artwork that trims smaller than `--size`: `--size 100 --padding 45`
+passes validation, but artwork trimming to 80 square would otherwise ask for 90 pixels of padding on
+an 80 pixel canvas. Padding that already fits the effective canvas is applied exactly as requested.
+
 The result is written as an 8-bit RGBA PNG, with the encoder set to clear the colour channels of
 fully transparent pixels so no invisible colour data is carried into the file.
 
@@ -267,7 +273,7 @@ already contains its own output will not reprocess those files.
 | `-o` | `--output` | Yes | n/a | Path to the directory where modified files are written |
 | `-c` | `--color` | No | `#FFFFFF` | The colour to tint the icon with, as hex or a known name |
 | `-s` | `--size` | No | `128` | The maximum size, in pixels, of the output icon |
-| `-p` | `--padding` | No | `0` | Pixels of padding per side. Must be less than `size / 2`. Does not change the output dimensions |
+| `-p` | `--padding` | No | `0` | Pixels of padding per side. Must be less than `size / 2`, and is clamped further on artwork that downscales to less than `size`. Does not change the output dimensions |
 
 ## Exit Codes
 

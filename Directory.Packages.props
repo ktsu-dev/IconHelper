@@ -6,9 +6,9 @@
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="Polyfill" Version="11.4.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageVersion Include="ktsu.Extensions" Version="1.6.17" />
-    <PackageVersion Include="ktsu.Semantics.Color" Version="5.5.1" />
-    <PackageVersion Include="ktsu.Semantics.Paths" Version="5.5.1" />
-    <PackageVersion Include="ktsu.Semantics.Strings" Version="5.5.1" />
+    <PackageVersion Include="ktsu.Extensions" Version="1.6.18" />
+    <PackageVersion Include="ktsu.Semantics.Color" Version="5.6.0" />
+    <PackageVersion Include="ktsu.Semantics.Paths" Version="5.6.0" />
+    <PackageVersion Include="ktsu.Semantics.Strings" Version="5.6.0" />
   </ItemGroup>
 </Project>

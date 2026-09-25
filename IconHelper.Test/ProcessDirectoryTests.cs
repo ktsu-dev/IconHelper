@@ -86,6 +86,45 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void SkipsOnTheFileNameRatherThanTheContainingPath()
+	{
+		using TempDirectory temp = new();
+		// The marker is in the directory name, and in no file name. Directory.GetFiles hands back
+		// full paths, so testing the whole string made every file below such a directory look
+		// already generated -- nothing written, and exit 0 to say so.
+		string input = temp.Combine(Path.Combine("icons.new.png.dir", "in"));
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Combine(input, "keep.png"), 64);
+		WritePng(Path.Combine(input, "also-keep.png"), 64);
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(2, result.Written, "'.new.png' in a parent directory should not skip anything.");
+		Assert.IsTrue(File.Exists(Path.Combine(output, "keep.png")));
+		Assert.IsTrue(File.Exists(Path.Combine(output, "also-keep.png")));
+	}
+
+	[TestMethod]
+	public void SkipsOnTheFileNameEvenBelowAMatchingPath()
+	{
+		using TempDirectory temp = new();
+		// Both at once, so a fix that stops looking at the path cannot also stop looking at the
+		// name: the marked file is still skipped, and the unmarked one beside it is still written.
+		string input = temp.Combine(Path.Combine("icons.new.png.dir", "in"));
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Combine(input, "keep.png"), 64);
+		WritePng(Path.Combine(input, "already.new.png"), 64);
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(1, result.Written, "The marked file should be skipped and the other one written.");
+		Assert.IsTrue(File.Exists(Path.Combine(output, "keep.png")));
+		Assert.IsFalse(File.Exists(Path.Combine(output, "already.new.png")));
+	}
+
+	[TestMethod]
 	public void ContinuesAfterAFileThatCannotBeDecoded()
 	{
 		using TempDirectory temp = new();

@@ -78,6 +78,54 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
+	public void ValidateRejectsNegativePadding()
+	{
+		// The upper bound never caught this: -5 >= 64 is false. The run then produced an output
+		// larger than the documented min(squareSize, size) canvas and exited 0 to say it worked.
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = 128;
+		args.Padding = -5;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, "Negative padding grows the canvas instead of insetting content.");
+		Assert.HasCount(1, errors);
+		Assert.AreEqual("Padding must not be negative.", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateRejectsASizeThatIsNotPositive()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = 0;
+		args.Padding = 0;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, "A size of zero leaves no canvas at all.");
+		Assert.HasCount(1, errors, $"Expected only the size error but got: {string.Join(", ", errors)}");
+		Assert.AreEqual("Size must be greater than zero.", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateRejectsANegativeSizeAndPaddingTogether()
+	{
+		// The combination the upper bound was least able to catch: -20 >= -10 / 2 is false, so
+		// both values passed validation untouched and the pair reached the pipeline.
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = -10;
+		args.Padding = -20;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, "Neither a negative size nor a negative padding is usable.");
+		Assert.HasCount(2, errors, $"Expected a size and a padding error but got: {string.Join(", ", errors)}");
+	}
+
+	[TestMethod]
 	public void ValidateUsesIntegerDivisionForOddSizes()
 	{
 		// 33 / 2 == 16 under integer division, so 16 is rejected and 15 accepted.

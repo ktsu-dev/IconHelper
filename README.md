@@ -247,6 +247,10 @@ the artwork leaves it alone.
 `finalSize - padding * 2` and then padded back out to `finalSize`, so the output is always
 `finalSize` square whatever the padding.
 
+That holds only while the padding is positive, so a negative `--padding` is rejected rather than
+clamped: it would resize the content *larger* than the canvas, and padding back out never shrinks
+an image. `--size` must likewise be greater than zero.
+
 Because the canvas is `min(squareSize, --size)` rather than `--size`, the padding is measured against
 that effective canvas and **clamped to `(finalSize - 1) / 2`** so at least one pixel of content
 survives. This only engages on artwork that trims smaller than `--size`: `--size 100 --padding 45`

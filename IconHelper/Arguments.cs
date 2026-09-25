@@ -30,7 +30,27 @@ internal sealed class Arguments
 	internal bool Validate(out Collection<string> errors)
 	{
 		errors = [];
-		if (Padding >= Size / 2)
+
+		if (Size <= 0)
+		{
+			errors.Add("Size must be greater than zero.");
+		}
+
+		// The upper bound alone was not a bound. A negative padding sails past it -- -5 >= 64 is
+		// false -- and then EffectivePadding hands it back unchanged, so the content is resized to
+		// finalSize - padding * 2, which is larger than the canvas. ImageSharp's Pad never shrinks
+		// an image, so the output comes out bigger than the documented min(squareSize, size),
+		// quietly and with exit code 0. Reporting it here rather than clamping it downstream keeps
+		// the documented invariant -- padding insets content, it never changes the canvas -- true
+		// by construction.
+		//
+		// Reported on its own, because "less than half the size" is not the complaint about a
+		// negative number, and half of an invalid size is not a bound worth quoting either.
+		if (Padding < 0)
+		{
+			errors.Add("Padding must not be negative.");
+		}
+		else if (Size > 0 && Padding >= Size / 2)
 		{
 			errors.Add("Padding must be less than half the size of the image.");
 		}

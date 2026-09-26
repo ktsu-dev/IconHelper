@@ -1,6 +1,7 @@
-## v1.5.11 (patch)
+## v1.5.12 (patch)
 
-Changes since v1.5.10:
+Changes since v1.5.11:
 
-- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Reject a negative padding and a non-positive size [patch] ([@Claude](https://github.com/Claude))
+- Skip generated icons by file name, not by full path [patch] ([@Claude](https://github.com/Claude))
 

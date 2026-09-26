@@ -116,7 +116,11 @@ internal static class IconHelper
 		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(inputDirectory, "*").ToCollection();
 		foreach (string? file in files)
 		{
-			if (file.Contains(".new.png"))
+			// The name, not the path. Directory.GetFiles hands back full paths, so testing the
+			// whole string let a directory anywhere above the input -- a user name, a date stamp,
+			// a project folder -- decide that every file below it was already generated. That
+			// failure is silent and total: nothing is written and the run still exits 0.
+			if (Path.GetFileName(file).Contains(".new.png", StringComparison.Ordinal))
 			{
 				continue;
 			}

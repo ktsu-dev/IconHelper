@@ -1,6 +1,6 @@
-## v1.5.13 (patch)
+## v1.5.14-pre.1 (prerelease)
 
-Changes since v1.5.12:
+Changes since v1.5.13:
 
-- Move CI onto the shared ci-shared.yml pipeline ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

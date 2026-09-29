@@ -1,3 +1,9 @@
+## v1.5.13 (patch)
+
+Changes since v1.5.12:
+
+- Move CI onto the shared ci-shared.yml pipeline ([@Claude](https://github.com/Claude))
+
 ## v1.5.13-pre.1 (prerelease)
 
 Changes since v1.5.12:

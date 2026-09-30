@@ -1,6 +1,6 @@
-## v1.5.14-pre.1 (prerelease)
+## v1.5.14-pre.2 (prerelease)
 
-Changes since v1.5.13:
+Changes since v1.5.14-pre.1:
 
-- Bump the ktsu group with 4 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 

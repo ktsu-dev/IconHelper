@@ -151,14 +151,12 @@ help text and exited 0.
 
 Do not "fix" these silently, they are documented in the README as limitations:
 
-- Output extensions are rewritten to `.png`, so two inputs sharing a base name (`a.png`, `a.jpg`)
-  collide and the later one wins.
 - A run that fails every single file still exits `2`, the same as a run that failed one file. The
   exit status says "something failed", the summary line says how much.
 
 ### Fixed Bugs Worth Knowing About
 
-Both are covered by regression tests. Do not reintroduce them.
+Each is covered by regression tests. Do not reintroduce them.
 
 - **Bounding-box off-by-one.** The crop used `right - left`, but `right` and `bottom` are *inclusive*
   indices of the last opaque pixel, so the span needs `+ 1`. Every icon used to lose its rightmost
@@ -180,6 +178,15 @@ Both are covered by regression tests. Do not reintroduce them.
   `PaddingTooLargeForTheCanvasStillLeavesVisibleContent`,
   `PaddingThatFitsIsAppliedExactlyAndNotClamped` and
   `ProcessDirectoryTests.SmallArtworkWithValidatedPaddingDoesNotFailTheBatch`.
+
+- **Inputs overwrote each other, and the output could overwrite the input.** Every output is
+  `<base name>.png`, so `save.png` and `save.bmp` wrote the same file: the later one won while the
+  summary counted both, and `--output` equal to `--input` replaced the source icons with their masks
+  and exited 0. `ProcessDirectory` now remembers the names it has written in a run and counts a
+  collision as a failed file, and `Validate` rejects an output directory that is the input directory
+  (`Arguments.PathComparison` decides case sensitivity per platform). Pinned by
+  `ProcessDirectoryTests.InputsSharingABaseNameDoNotOverwriteEachOther` and
+  `ArgumentsTests.ValidateRejectsAnOutputThatIsTheInputDirectory`.
 
 ## Testing
 

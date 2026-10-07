@@ -113,6 +113,11 @@ internal static class IconHelper
 
 		int processed = 0;
 		int failed = 0;
+
+		// Output name to the input that produced it. Every output is <base name>.png, so inputs that
+		// share a base name (save.png, save.bmp) map to one file, and writing both would leave only
+		// the last while counting two.
+		Dictionary<string, string> written = new(StringComparer.FromComparison(Arguments.PathComparison));
 		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(inputDirectory, "*").ToCollection();
 		foreach (string? file in files)
 		{
@@ -122,6 +127,14 @@ internal static class IconHelper
 			// failure is silent and total: nothing is written and the run still exits 0.
 			if (Path.GetFileName(file).Contains(".new.png", StringComparison.Ordinal))
 			{
+				continue;
+			}
+
+			string outputName = $"{Path.GetFileNameWithoutExtension(file)}.png";
+			if (written.TryGetValue(outputName, out string? earlierInput))
+			{
+				Console.WriteLine($"Failed to process {file}: its output {outputName} was already written from {earlierInput}.");
+				failed++;
 				continue;
 			}
 
@@ -135,10 +148,11 @@ internal static class IconHelper
 				// Always write a .png extension, since the encoder always writes PNG data. FileName
 				// rejects anything carrying a directory separator, and the / operator composes the
 				// two into an absolute file path.
-				FileName outputFileName = FileName.Create<FileName>($"{Path.GetFileNameWithoutExtension(file)}.png");
+				FileName outputFileName = FileName.Create<FileName>(outputName);
 				AbsoluteFilePath outputFilePath = outputDirectory / outputFileName;
 
 				image.SaveAsPng(outputFilePath, Encoder);
+				written.Add(outputName, file);
 				processed++;
 			}
 			catch (Exception e)

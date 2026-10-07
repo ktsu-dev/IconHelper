@@ -199,6 +199,22 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
+	public void ValidateRejectsAnOutputThatIsTheInputDirectory()
+	{
+		// Every output is <base name>.png, so writing into the input directory replaces the .png
+		// sources with their own masks.
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.OutputPath = args.InputPath + Path.DirectorySeparatorChar;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.HasCount(1, errors);
+		Assert.Contains("--output must not be the --input directory", errors[0]);
+	}
+
+	[TestMethod]
 	public void ValidateRejectsEmptyPaths()
 	{
 		Arguments args = new();

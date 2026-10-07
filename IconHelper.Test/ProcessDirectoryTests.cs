@@ -77,12 +77,12 @@ public class ProcessDirectoryTests
 		string input = temp.Combine("in");
 		string output = temp.Combine("out");
 		Directory.CreateDirectory(input);
-		WritePng(Path.Combine(input, "save.png"), 64);
+		WritePng(Path.Join(input, "save.png"), 64);
 
 		using (Image<Rgba32> bitmap = TestImages.Blank(64, 64))
 		{
 			TestImages.FillRect(bitmap, 16, 16, 32, 32, new Rgba32(255, 255, 255, 255));
-			bitmap.SaveAsBmp(Path.Combine(input, "save.bmp"));
+			bitmap.SaveAsBmp(Path.Join(input, "save.bmp"));
 		}
 
 		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);

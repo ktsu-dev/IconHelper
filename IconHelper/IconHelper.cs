@@ -159,11 +159,20 @@ internal static class IconHelper
 	/// Reduces an icon to a coverage mask: every pixel carries the flat target colour and the shape
 	/// lives entirely in the alpha channel. The result is trimmed of its transparent margins, centred
 	/// on a square canvas and scaled down to at most <paramref name="size"/> pixels.
+	/// An animated input is reduced to its first frame, since the output is a static icon.
 	/// The image is mutated in place.
 	/// </summary>
 	internal static void ProcessImage(Image<Rgba32> image, Color color, int size, int padding)
 	{
 		Ensure.NotNull(image);
+
+		// An animated GIF, APNG or WebP loads with one frame per step. Mutate applies to every frame,
+		// but ProcessPixelRows below reads and writes the root frame alone, so the other frames would
+		// skip the coverage pass and be saved as an animated PNG of raw greyscale. Drop them first.
+		while (image.Frames.Count > 1)
+		{
+			image.Frames.RemoveFrame(image.Frames.Count - 1);
+		}
 
 		// The semantic Color stores linear channels as doubles. Encode to sRGB bytes once here rather
 		// than per pixel, both for speed and so the pass below stays plain byte arithmetic.

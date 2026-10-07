@@ -376,4 +376,26 @@ public class ProcessImageTests
 		Assert.AreEqual(0, image[15, 15].A, "The transparent notch should survive processing.");
 		Assert.AreEqual(255, image[2, 2].A, "The surrounding artwork should remain opaque.");
 	}
+
+	[TestMethod]
+	public void ReducesAnAnimatedInputToItsFirstFrame()
+	{
+		// An animated GIF, APNG or WebP decodes to one frame per animation step. Only the root frame
+		// used to get the coverage pass, so the rest were written out as an animated PNG of raw
+		// greyscale, cropped to the root frame's bounds.
+		using Image<Rgba32> image = TestImages.Blank(64, 64);
+		TestImages.FillRect(image, 20, 20, 20, 20, OpaqueWhite);
+		using (Image<Rgba32> second = TestImages.Blank(64, 64))
+		{
+			TestImages.FillRect(second, 5, 5, 55, 55, OpaqueWhite);
+			image.Frames.AddFrame(second.Frames.RootFrame);
+		}
+
+		IconHelper.ProcessImage(image, Color.FromBytes(255, 0, 0), 32, 0);
+
+		Assert.AreEqual(1, image.Frames.Count, "The output should be a single static frame.");
+		Assert.AreEqual(20, image.Width, "The bounds should come from the first frame's artwork.");
+		Assert.AreEqual(new Rgba32(255, 0, 0, 255), image[10, 10]);
+		Assert.AreEqual(new Rgba32(255, 0, 0, 255), image[0, 0]);
+	}
 }

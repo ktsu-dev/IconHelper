@@ -69,6 +69,31 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void InputsSharingABaseNameDoNotOverwriteEachOther()
+	{
+		// Both map to save.png. Writing both left only the later file on disk while the summary
+		// counted two, so the second is reported as failed instead and the first is kept.
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Join(input, "save.png"), 64);
+
+		using (Image<Rgba32> bitmap = TestImages.Blank(64, 64))
+		{
+			TestImages.FillRect(bitmap, 16, 16, 32, 32, new Rgba32(255, 255, 255, 255));
+			bitmap.SaveAsBmp(Path.Join(input, "save.bmp"));
+		}
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(1, result.Written, "Only one output file can exist for the shared name.");
+		Assert.AreEqual(1, result.Failed, "The colliding input must be reported, not silently overwritten.");
+		Assert.HasCount(result.Written, Directory.GetFiles(output), "The written count must match the files on disk.");
+		Assert.AreEqual(IconHelper.ExitSomeFilesFailed, IconHelper.ExitCodeFor(result));
+	}
+
+	[TestMethod]
 	public void SkipsFilesAlreadyMarkedAsGenerated()
 	{
 		using TempDirectory temp = new();

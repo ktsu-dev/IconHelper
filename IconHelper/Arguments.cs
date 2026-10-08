@@ -55,14 +55,23 @@ internal sealed class Arguments
 			errors.Add("Padding must be less than half the size of the image.");
 		}
 
-		if (!TryResolveInput(out _, out string? inputError))
+		bool inputResolved = TryResolveInput(out AbsoluteDirectoryPath? input, out string? inputError);
+		if (!inputResolved)
 		{
-			errors.Add(inputError);
+			errors.Add(inputError!);
 		}
 
-		if (!TryResolveOutput(out _, out string? outputError))
+		bool outputResolved = TryResolveOutput(out AbsoluteDirectoryPath? output, out string? outputError);
+		if (!outputResolved)
 		{
-			errors.Add(outputError);
+			errors.Add(outputError!);
+		}
+
+		// Every output is a .png named after its input, so writing into the input directory replaces
+		// any .png source with its own recoloured mask, and the original artwork is gone.
+		if (inputResolved && outputResolved && IsSameDirectory(input!, output!))
+		{
+			errors.Add($"--output must not be the --input directory, or the source icons are overwritten: {(string)output!}");
 		}
 
 		if (!ColorParser.TryParse(Color, out _))
@@ -72,6 +81,19 @@ internal sealed class Arguments
 
 		return errors.Count == 0;
 	}
+
+	/// <summary>
+	/// How file and directory names compare on this platform. Windows and macOS file systems are case
+	/// insensitive by default, so <c>Icons</c> and <c>icons</c> name the same directory there.
+	/// </summary>
+	internal static StringComparison PathComparison { get; } =
+		OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+	private static bool IsSameDirectory(AbsoluteDirectoryPath first, AbsoluteDirectoryPath second) =>
+		string.Equals(
+			Path.TrimEndingDirectorySeparator((string)first),
+			Path.TrimEndingDirectorySeparator((string)second),
+			PathComparison);
 
 	/// <summary>
 	/// Resolves <see cref="InputPath"/> to an absolute directory that must already exist.

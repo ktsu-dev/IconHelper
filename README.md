@@ -293,8 +293,10 @@ for how many succeeded.
 ## Notes and Limitations
 
 - Output is always PNG, and the extension is rewritten to match, so `logo.jpg` becomes `logo.png`. If
-  the input directory holds two files with the same base name but different extensions, the later one
-  overwrites the earlier.
+  the input directory holds two files with the same base name but different extensions, the first one
+  processed is written and the other is reported as failed, so the run exits `2`. Rename one of them.
+- `--output` must not be the `--input` directory, because the outputs would replace the `.png`
+  sources. That is rejected with exit code `1`.
 - Input formats are whatever ImageSharp can decode (PNG, JPEG, BMP, GIF, TGA, TIFF, WebP, PBM, QOI).
   Vector formats such as SVG are not supported.
 - The tool only ever shrinks artwork. Passing a `--size` larger than the source icon leaves it at its

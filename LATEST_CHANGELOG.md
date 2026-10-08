@@ -1,6 +1,8 @@
-## v1.5.14-pre.6 (prerelease)
+## v1.5.14 (patch)
 
-Changes since v1.5.14-pre.5:
+Changes since v1.5.13:
 
-- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Use Path.Join for the collision test's input paths ([@Claude](https://github.com/Claude))
+- Report inputs that share an output name, and reject --output equal to --input [patch] ([@Claude](https://github.com/Claude))
+- Reduce an animated input to its first frame [patch] ([@Claude](https://github.com/Claude))
 

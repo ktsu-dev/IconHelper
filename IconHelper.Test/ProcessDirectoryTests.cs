@@ -167,6 +167,27 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void SkipsFileManagerMetadataWithoutCountingItAsFailed()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		File.WriteAllBytes(Path.Join(input, ".DS_Store"), [0, 0, 0, 1, (byte)'B', (byte)'u', (byte)'d', (byte)'1']);
+		File.WriteAllText(Path.Join(input, "._good.png"), "AppleDouble resource fork");
+		File.WriteAllText(Path.Join(input, "desktop.ini"), "[.ShellClassInfo]\r\n");
+		File.WriteAllText(Path.Join(input, "THUMBS.DB"), "not an image");
+		File.WriteAllText(Path.Join(input, "ehthumbs.db"), "not an image");
+		WritePng(Path.Join(input, "good.png"), 64);
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(new BatchResult(1, 0), result, "File-manager metadata should be neither written nor failed.");
+		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(result));
+		Assert.AreEqual(1, Directory.GetFiles(output).Length);
+	}
+
+	[TestMethod]
 	public void ReportsAndSkipsAFileThatCannotBeOpened()
 	{
 		// A locked file fails with an IOException rather than one of the ImageSharp decode

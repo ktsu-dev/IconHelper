@@ -125,7 +125,8 @@ internal static class IconHelper
 			// whole string let a directory anywhere above the input -- a user name, a date stamp,
 			// a project folder -- decide that every file below it was already generated. That
 			// failure is silent and total: nothing is written and the run still exits 0.
-			if (Path.GetFileName(file).Contains(".new.png", StringComparison.Ordinal))
+			string fileName = Path.GetFileName(file);
+			if (fileName.Contains(".new.png", StringComparison.Ordinal) || IsFileManagerMetadata(fileName))
 			{
 				continue;
 			}
@@ -168,6 +169,18 @@ internal static class IconHelper
 
 		return new BatchResult(processed, failed);
 	}
+
+	/// <summary>
+	/// Names that Finder and Explorer drop into any folder they open: dot-files such as .DS_Store and
+	/// ._ AppleDouble files, plus Thumbs.db, ehthumbs.db and desktop.ini. They are not icons, so they
+	/// count as neither written nor failed; counting them as failures made every batch on such a
+	/// folder exit 2 and taught scripts to ignore the code that reports real decode failures.
+	/// </summary>
+	internal static bool IsFileManagerMetadata(string fileName)
+		=> fileName.StartsWith('.')
+		|| fileName.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase)
+		|| fileName.Equals("ehthumbs.db", StringComparison.OrdinalIgnoreCase)
+		|| fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Reduces an icon to a coverage mask: every pixel carries the flat target colour and the shape

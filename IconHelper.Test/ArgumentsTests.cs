@@ -126,20 +126,54 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
-	public void ValidateUsesIntegerDivisionForOddSizes()
+	public void ValidateAcceptsPaddingThatLeavesOnePixelOnAnOddSize()
 	{
-		// 33 / 2 == 16 under integer division, so 16 is rejected and 15 accepted.
+		// 16 pixels a side on a 33 pixel canvas leaves one pixel of content, which is what the
+		// pipeline's own clamp, (size - 1) / 2, allows. Integer division (33 / 2 == 16) used to
+		// reject it.
 		using TempDirectory temp = new();
 		Arguments rejected = ValidArguments(temp);
 		rejected.Size = 33;
-		rejected.Padding = 16;
+		rejected.Padding = 17;
 
 		Arguments accepted = ValidArguments(temp);
 		accepted.Size = 33;
-		accepted.Padding = 15;
+		accepted.Padding = 16;
 
-		Assert.IsFalse(rejected.Validate(out _), "Padding of 16 is not less than 33 / 2 == 16.");
-		Assert.IsTrue(accepted.Validate(out _), "Padding of 15 is less than 33 / 2 == 16.");
+		Assert.IsFalse(rejected.Validate(out _), "Padding of 17 on 33 pixels leaves no content.");
+		Assert.IsTrue(accepted.Validate(out _), "Padding of 16 on 33 pixels leaves one pixel of content.");
+	}
+
+	[TestMethod]
+	[DataRow(1, 0)]
+	[DataRow(3, 1)]
+	public void ValidateAcceptsTheSmallestSizesThePipelineHandles(int size, int padding)
+	{
+		// Size / 2 rounded these down to a bound of 0 and 1, so --size 1 failed even at the
+		// default padding of 0, and --size 3 --padding 1 was refused though it leaves a pixel.
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = size;
+		args.Padding = padding;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsTrue(valid, $"Expected --size {size} --padding {padding} to be valid but got: {string.Join(", ", errors)}");
+	}
+
+	[TestMethod]
+	public void ValidateRejectsPaddingThatLeavesNoContentOnASmallSize()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = 4;
+		args.Padding = 2;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, "Two pixels a side on a four pixel canvas leaves no content.");
+		Assert.HasCount(1, errors);
+		Assert.AreEqual("Padding must be less than half the size of the image.", errors[0]);
 	}
 
 	[TestMethod]

@@ -1,8 +1,8 @@
-## v1.5.14 (patch)
+## v1.5.15 (patch)
 
-Changes since v1.5.13:
+Changes since v1.5.14:
 
-- Use Path.Join for the collision test's input paths ([@Claude](https://github.com/Claude))
-- Report inputs that share an output name, and reject --output equal to --input [patch] ([@Claude](https://github.com/Claude))
-- Reduce an animated input to its first frame [patch] ([@Claude](https://github.com/Claude))
+- Suppress the unpatched ImageSharp 3.1.12 advisories so restore passes ([@matt-edmondson](https://github.com/matt-edmondson))
+- Use Path.Join for the metadata test's fixture paths [patch] ([@Claude](https://github.com/Claude))
+- Skip Finder and Explorer metadata files instead of counting them as failed [patch] ([@Claude](https://github.com/Claude))
 

@@ -24,7 +24,7 @@ internal sealed class Arguments
 	[Option('s', "size", Required = false, HelpText = "The maximum size of the icon. Defaults to 128.")]
 	public int Size { get; set; } = 128;
 
-	[Option('p', "padding", Required = false, HelpText = "The number of pixels per side to pad the output image. Must be < (size / 2), and is clamped further on artwork that downscales to less than size. Will not change the output size. Defaults to 0.")]
+	[Option('p', "padding", Required = false, HelpText = "The number of pixels per side to pad the output image. Must be less than half the size, leaving at least one pixel of content, and is clamped further on artwork that downscales to less than size. Will not change the output size. Defaults to 0.")]
 	public int Padding { get; set; } = 0;
 
 	internal bool Validate(out Collection<string> errors)
@@ -50,7 +50,10 @@ internal sealed class Arguments
 		{
 			errors.Add("Padding must not be negative.");
 		}
-		else if (Size > 0 && Padding >= Size / 2)
+		// Doubled rather than halved: Size / 2 rounds an odd size down, which rejected padding the
+		// pipeline handles (--size 3 --padding 1) and even the default 0 at --size 1. This is the
+		// bound EffectivePadding clamps to, (size - 1) / 2, so at least one pixel of content is left.
+		else if (Size > 0 && Padding * 2 >= Size)
 		{
 			errors.Add("Padding must be less than half the size of the image.");
 		}

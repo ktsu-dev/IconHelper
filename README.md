@@ -277,14 +277,14 @@ already contains its own output will not reprocess those files.
 | `-o` | `--output` | Yes | n/a | Path to the directory where modified files are written |
 | `-c` | `--color` | No | `#FFFFFF` | The colour to tint the icon with, as hex or a known name |
 | `-s` | `--size` | No | `128` | The maximum size, in pixels, of the output icon |
-| `-p` | `--padding` | No | `0` | Pixels of padding per side. Must be less than `size / 2`, and is clamped further on artwork that downscales to less than `size`. Does not change the output dimensions |
+| `-p` | `--padding` | No | `0` | Pixels of padding per side. Must be less than half of `size` (`padding * 2 < size`), and is clamped further on artwork that downscales to less than `size`. Does not change the output dimensions |
 
 ## Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | `0` | Every file was processed successfully. Also returned for `--help` and `--version` |
-| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an unrecognised `--color`, or `padding >= size / 2` |
+| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an unrecognised `--color`, or `padding * 2 >= size` |
 | `2` | The batch ran to completion but at least one file could not be processed |
 
 Code `2` means the run finished and the remaining icons were still written. Check the summary line

@@ -173,12 +173,12 @@ public class ProcessDirectoryTests
 		string input = temp.Combine("in");
 		string output = temp.Combine("out");
 		Directory.CreateDirectory(input);
-		File.WriteAllBytes(Path.Combine(input, ".DS_Store"), [0, 0, 0, 1, (byte)'B', (byte)'u', (byte)'d', (byte)'1']);
-		File.WriteAllText(Path.Combine(input, "._good.png"), "AppleDouble resource fork");
-		File.WriteAllText(Path.Combine(input, "desktop.ini"), "[.ShellClassInfo]\r\n");
-		File.WriteAllText(Path.Combine(input, "THUMBS.DB"), "not an image");
-		File.WriteAllText(Path.Combine(input, "ehthumbs.db"), "not an image");
-		WritePng(Path.Combine(input, "good.png"), 64);
+		File.WriteAllBytes(Path.Join(input, ".DS_Store"), [0, 0, 0, 1, (byte)'B', (byte)'u', (byte)'d', (byte)'1']);
+		File.WriteAllText(Path.Join(input, "._good.png"), "AppleDouble resource fork");
+		File.WriteAllText(Path.Join(input, "desktop.ini"), "[.ShellClassInfo]\r\n");
+		File.WriteAllText(Path.Join(input, "THUMBS.DB"), "not an image");
+		File.WriteAllText(Path.Join(input, "ehthumbs.db"), "not an image");
+		WritePng(Path.Join(input, "good.png"), 64);
 
 		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 

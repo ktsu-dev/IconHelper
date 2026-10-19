@@ -214,6 +214,42 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void AnOutputFolderUnderAFileExitsWithInvalidArgumentsInsteadOfThrowing()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Join(input, "icon.png"), 64);
+
+		// The parent of the output is a file, so the folder can never be created. Validate only
+		// rejects an output that is itself an existing file, so this gets as far as the batch.
+		string output = Path.Join(input, "icon.png", "sub");
+
+		Assert.AreEqual(IconHelper.ExitInvalidArguments, IconHelper.Execute(ArgumentsFor(input, output)));
+	}
+
+	[TestMethod]
+	public void ExecuteReportsInvalidArgumentsForAMissingInput()
+	{
+		using TempDirectory temp = new();
+
+		Assert.AreEqual(
+			IconHelper.ExitInvalidArguments,
+			IconHelper.Execute(ArgumentsFor(temp.UncreatedSubdirectory("missing"), temp.Combine("out"))));
+	}
+
+	[TestMethod]
+	public void ExecuteReportsSuccessForAGoodRun()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Join(input, "icon.png"), 64);
+
+		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.Execute(ArgumentsFor(input, temp.Combine("out"))));
+	}
+
+	[TestMethod]
 	public void ExitCodeIsSuccessWhenNothingFailed()
 	{
 		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(new BatchResult(4, 0)));

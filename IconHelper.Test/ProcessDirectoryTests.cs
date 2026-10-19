@@ -219,11 +219,11 @@ public class ProcessDirectoryTests
 		using TempDirectory temp = new();
 		string input = temp.Combine("in");
 		Directory.CreateDirectory(input);
-		WritePng(Path.Combine(input, "icon.png"), 64);
+		WritePng(Path.Join(input, "icon.png"), 64);
 
 		// The parent of the output is a file, so the folder can never be created. Validate only
 		// rejects an output that is itself an existing file, so this gets as far as the batch.
-		string output = Path.Combine(input, "icon.png", "sub");
+		string output = Path.Join(input, "icon.png", "sub");
 
 		Assert.AreEqual(IconHelper.ExitInvalidArguments, IconHelper.Execute(ArgumentsFor(input, output)));
 	}
@@ -234,7 +234,7 @@ public class ProcessDirectoryTests
 		using TempDirectory temp = new();
 		string input = temp.Combine("in");
 		Directory.CreateDirectory(input);
-		WritePng(Path.Combine(input, "icon.png"), 64);
+		WritePng(Path.Join(input, "icon.png"), 64);
 
 		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.Execute(ArgumentsFor(input, temp.Combine("out"))));
 	}

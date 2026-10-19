@@ -229,6 +229,16 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void ExecuteReportsInvalidArgumentsForAMissingInput()
+	{
+		using TempDirectory temp = new();
+
+		Assert.AreEqual(
+			IconHelper.ExitInvalidArguments,
+			IconHelper.Execute(ArgumentsFor(temp.UncreatedSubdirectory("missing"), temp.Combine("out"))));
+	}
+
+	[TestMethod]
 	public void ExecuteReportsSuccessForAGoodRun()
 	{
 		using TempDirectory temp = new();

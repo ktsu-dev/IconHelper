@@ -62,14 +62,7 @@ internal static class IconHelper
 			? ExitSuccess
 			: ExitInvalidArguments;
 
-	private static void Run(Arguments args)
-	{
-		int exitCode = Execute(args);
-		if (exitCode != ExitSuccess)
-		{
-			Environment.Exit(exitCode);
-		}
-	}
+	private static void Run(Arguments args) => Environment.Exit(Execute(args));
 
 	/// <summary>
 	/// Validates the arguments, runs the batch and reports it, returning the exit code rather than

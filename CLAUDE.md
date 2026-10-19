@@ -147,6 +147,12 @@ names. That narrowing is deliberate and pinned by `ColorParserTests.RejectsCssNa
 `Main` wires the second one through `WithNotParsed`. Without it a missing required option printed the
 help text and exited 0.
 
+`Run` is a thin `Environment.Exit` wrapper around `Execute(Arguments)`, which returns the exit code so a
+whole run is testable. `Execute` also turns an `IOException` or `UnauthorizedAccessException` from
+`ProcessDirectory` into exit 1. Only the up-front `Directory.CreateDirectory` and `Directory.GetFiles`
+can raise one, since each file's own failures are caught inside the batch, and a folder that cannot be
+created or listed used to end the run with a stack trace and exit 134.
+
 ### Known Rough Edges
 
 Do not "fix" these silently, they are documented in the README as limitations:

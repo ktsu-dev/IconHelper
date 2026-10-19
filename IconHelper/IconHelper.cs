@@ -64,25 +64,50 @@ internal static class IconHelper
 
 	private static void Run(Arguments args)
 	{
+		int exitCode = Execute(args);
+		if (exitCode != ExitSuccess)
+		{
+			Environment.Exit(exitCode);
+		}
+	}
+
+	/// <summary>
+	/// Validates the arguments, runs the batch and reports it, returning the exit code rather than
+	/// exiting so the outcome is testable without spawning a process.
+	/// </summary>
+	internal static int Execute(Arguments args)
+	{
+		Ensure.NotNull(args);
+
 		if (!args.Validate(out System.Collections.ObjectModel.Collection<string>? errors))
 		{
 			Console.WriteLine($"Argument validation failed:\n\t{string.Join("\n\t", errors)}");
-			Environment.Exit(ExitInvalidArguments);
+			return ExitInvalidArguments;
 		}
 
 		// Validate already proved this parses, so the result is not worth re-checking.
 		_ = ColorParser.TryParse(args.Color, out Color color);
-		BatchResult result = ProcessDirectory(args, color);
+
+		BatchResult result;
+		try
+		{
+			result = ProcessDirectory(args, color);
+		}
+		catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+		{
+			// Validate can only check that the paths are well formed. Whether the output folder can be
+			// created, or the input folder listed, is known only on trying, and both happen before the
+			// per-file catch, so without this an unusable folder ended the run with a stack trace and
+			// exit 134. Each file's own failures never reach here: ProcessDirectory catches those.
+			Console.WriteLine($"Argument validation failed:\n\t{exception.Message}");
+			return ExitInvalidArguments;
+		}
 
 		Console.WriteLine(result.Failed == 0
 			? $"Done. {result.Written} file(s) written."
 			: $"Done. {result.Written} file(s) written, {result.Failed} failed.");
 
-		int exitCode = ExitCodeFor(result);
-		if (exitCode != ExitSuccess)
-		{
-			Environment.Exit(exitCode);
-		}
+		return ExitCodeFor(result);
 	}
 
 	/// <summary>

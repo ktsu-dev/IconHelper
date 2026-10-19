@@ -1,7 +1,8 @@
-## v1.5.17-pre.1 (prerelease)
+## v1.5.17 (patch)
 
 Changes since v1.5.16:
 
-- Bump Polyfill from 11.4.3 to 11.4.5 (dependabot[bot])
-- Bump the ktsu group with 3 updates (dependabot[bot])
+- Cover Execute's validation branch and make Run a one-line wrapper (Claude)
+- Use Path.Join in the new Execute tests, as the code-quality check asks (Claude)
+- Exit 1 for an output folder that can't be created instead of crashing [patch] (Claude)
 

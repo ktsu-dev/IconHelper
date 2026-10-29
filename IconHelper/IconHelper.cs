@@ -74,7 +74,7 @@ internal static class IconHelper
 
 		if (!args.Validate(out System.Collections.ObjectModel.Collection<string>? errors))
 		{
-			Console.WriteLine($"Argument validation failed:\n\t{string.Join("\n\t", errors)}");
+			Console.Error.WriteLine($"Argument validation failed:\n\t{string.Join("\n\t", errors)}");
 			return ExitInvalidArguments;
 		}
 
@@ -92,7 +92,7 @@ internal static class IconHelper
 			// created, or the input folder listed, is known only on trying, and both happen before the
 			// per-file catch, so without this an unusable folder ended the run with a stack trace and
 			// exit 134. Each file's own failures never reach here: ProcessDirectory catches those.
-			Console.WriteLine($"Argument validation failed:\n\t{exception.Message}");
+			Console.Error.WriteLine($"Argument validation failed:\n\t{exception.Message}");
 			return ExitInvalidArguments;
 		}
 
@@ -152,7 +152,7 @@ internal static class IconHelper
 			string outputName = $"{Path.GetFileNameWithoutExtension(file)}.png";
 			if (written.TryGetValue(outputName, out string? earlierInput))
 			{
-				Console.WriteLine($"Failed to process {file}: its output {outputName} was already written from {earlierInput}.");
+				Console.Error.WriteLine($"Failed to process {file}: its output {outputName} was already written from {earlierInput}.");
 				failed++;
 				continue;
 			}
@@ -180,7 +180,7 @@ internal static class IconHelper
 				// but locked files, permission problems and malformed images that trip an assertion
 				// deeper in the decoder all surface as something else. Any of those should cost one
 				// icon, not the whole run, so the type name is included to keep it diagnosable.
-				Console.WriteLine($"Failed to process {file}: {e.GetType().Name}: {e.Message}");
+				Console.Error.WriteLine($"Failed to process {file}: {e.GetType().Name}: {e.Message}");
 				failed++;
 			}
 		}

@@ -290,6 +290,10 @@ already contains its own output will not reprocess those files.
 Code `2` means the run finished and the remaining icons were still written. Check the summary line
 for how many succeeded.
 
+Diagnostics, meaning the reason for a code `1` and each file that failed under a code `2`, are written to
+stderr. The `Processing …` progress lines and the closing `Done.` summary are written to stdout, so
+discarding stdout silences the progress without hiding why a run failed.
+
 ## Notes and Limitations
 
 - Output is always PNG, and the extension is rewritten to match, so `logo.jpg` becomes `logo.png`. If

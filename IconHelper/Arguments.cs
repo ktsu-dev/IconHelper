@@ -53,7 +53,8 @@ internal sealed class Arguments
 		// Doubled rather than halved: Size / 2 rounds an odd size down, which rejected padding the
 		// pipeline handles (--size 3 --padding 1) and even the default 0 at --size 1. This is the
 		// bound EffectivePadding clamps to, (size - 1) / 2, so at least one pixel of content is left.
-		else if (Size > 0 && Padding * 2 >= Size)
+		// Widened to long so a padding above int.MaxValue / 2 cannot wrap negative and pass.
+		else if (Size > 0 && (long)Padding * 2 >= Size)
 		{
 			errors.Add("Padding must be less than half the size of the image.");
 		}

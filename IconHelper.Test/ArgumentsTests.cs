@@ -162,6 +162,23 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
+	[DataRow((int.MaxValue / 2) + 1)]
+	[DataRow(int.MaxValue)]
+	public void ValidateRejectsPaddingWhoseDoubleOverflowsAnInt(int padding)
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Size = 128;
+		args.Padding = padding;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, $"Padding {padding} is far above half of 128 and should be rejected.");
+		Assert.HasCount(1, errors);
+		Assert.AreEqual("Padding must be less than half the size of the image.", errors[0]);
+	}
+
+	[TestMethod]
 	public void ValidateRejectsPaddingThatLeavesNoContentOnASmallSize()
 	{
 		using TempDirectory temp = new();

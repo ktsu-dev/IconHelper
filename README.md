@@ -108,9 +108,11 @@ iconhelper -i ./icons -o ./out -c "orange"
 ```
 
 The known names are `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `gray`,
-`grey`, `orange`, `purple` and `transparent`, matched case insensitively. Any other colour must be
-given as hex. An unrecognised value is rejected by validation with the list of names, rather than
-being silently misread.
+`grey`, `orange` and `purple`, matched case insensitively. Any other colour must be given as hex.
+An unrecognised value is rejected by validation with the list of names, rather than being silently
+misread. A fully transparent colour, `transparent` or any hex whose alpha is `00`, is rejected too:
+its alpha would be ignored and the icon painted opaque in its RGB, black in the case of
+`transparent`.
 
 ### Setting a Maximum Size
 

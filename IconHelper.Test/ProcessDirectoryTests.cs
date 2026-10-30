@@ -229,6 +229,22 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void ExecuteRejectsATransparentColorWithoutWritingIcons()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Join(input, "icon.png"), 64);
+
+		Arguments args = ArgumentsFor(input, output);
+		args.Color = "transparent";
+
+		Assert.AreEqual(IconHelper.ExitInvalidArguments, IconHelper.Execute(args));
+		Assert.IsFalse(File.Exists(Path.Join(output, "icon.png")), "No solid black icon should be written.");
+	}
+
+	[TestMethod]
 	public void ExecuteReportsInvalidArgumentsForAMissingInput()
 	{
 		using TempDirectory temp = new();

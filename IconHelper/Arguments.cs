@@ -92,11 +92,67 @@ internal sealed class Arguments
 	internal static StringComparison PathComparison { get; } =
 		OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
+	/// <summary>
+	/// Whether the two paths name the same directory. Comparing the text alone misses a second
+	/// spelling of the same folder, such as a symlink or junction to it, so each path is also compared
+	/// with every link along it followed to its final target.
+	/// </summary>
 	private static bool IsSameDirectory(AbsoluteDirectoryPath first, AbsoluteDirectoryPath second) =>
 		string.Equals(
 			Path.TrimEndingDirectorySeparator((string)first),
 			Path.TrimEndingDirectorySeparator((string)second),
-			PathComparison);
+			PathComparison)
+		|| string.Equals(ResolveLinks(first), ResolveLinks(second), PathComparison);
+
+	/// <summary>
+	/// The deepest the link chain is followed before giving up, matching Linux's limit on nested links.
+	/// </summary>
+	private const int MaxLinkDepth = 40;
+
+	/// <summary>
+	/// Rebuilds <paramref name="path"/> one segment at a time, replacing each segment that is a link
+	/// with the final target of that link. Segments that do not exist yet are kept as written, since
+	/// they cannot be links. A path that cannot be resolved, such as one with a link loop or an
+	/// unreadable segment, is returned as written, which leaves only the text comparison to rely on.
+	/// </summary>
+	private static string ResolveLinks(string path, int depth = 0)
+	{
+		string full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+		if (depth >= MaxLinkDepth)
+		{
+			return full;
+		}
+
+		try
+		{
+			string root = Path.GetPathRoot(full) ?? string.Empty;
+			string resolved = root;
+			string[] segments = full[root.Length..].Split(
+				[Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+				StringSplitOptions.RemoveEmptyEntries);
+
+			foreach (string segment in segments)
+			{
+				resolved = Path.Join(resolved, segment);
+				DirectoryInfo info = new(resolved);
+				if (info.LinkTarget is not null && info.ResolveLinkTarget(returnFinalTarget: true) is FileSystemInfo target)
+				{
+					// The target's own ancestors may be links too, so resolve it in turn.
+					resolved = ResolveLinks(target.FullName, depth + 1);
+				}
+			}
+
+			return Path.TrimEndingDirectorySeparator(resolved);
+		}
+		catch (IOException)
+		{
+			return full;
+		}
+		catch (UnauthorizedAccessException)
+		{
+			return full;
+		}
+	}
 
 	/// <summary>
 	/// Resolves <see cref="InputPath"/> to an absolute directory that must already exist.

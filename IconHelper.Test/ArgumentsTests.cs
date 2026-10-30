@@ -249,6 +249,89 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
+	public void ValidateRejectsAnOutputThatIsASymlinkToTheInputDirectory()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.OutputPath = temp.Combine("link-to-in");
+		CreateDirectoryLinkOrSkip(args.OutputPath, args.InputPath);
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid, "A symlink to --input is the same folder, so its icons would be overwritten.");
+		Assert.HasCount(1, errors);
+		Assert.Contains("--output must not be the --input directory", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateRejectsAnInputThatIsASymlinkToTheOutputDirectory()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		Directory.CreateDirectory(args.OutputPath);
+		args.InputPath = temp.Combine("link-to-out");
+		CreateDirectoryLinkOrSkip(args.InputPath, args.OutputPath);
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.HasCount(1, errors);
+		Assert.Contains("--output must not be the --input directory", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateRejectsAnOutputReachedThroughASymlinkedParent()
+	{
+		// base/icons is the input; link-to-base/icons is the same folder through a linked ancestor.
+		using TempDirectory temp = new();
+		string baseDirectory = temp.Combine("base");
+		string input = Path.Join(baseDirectory, "icons");
+		Directory.CreateDirectory(input);
+		string link = temp.Combine("link-to-base");
+		CreateDirectoryLinkOrSkip(link, baseDirectory);
+		Arguments args = new()
+		{
+			InputPath = input,
+			OutputPath = Path.Join(link, "icons"),
+		};
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.HasCount(1, errors);
+		Assert.Contains("--output must not be the --input directory", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateAcceptsAnOutputThatIsASymlinkToAnotherDirectory()
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		string elsewhere = temp.Combine("elsewhere");
+		Directory.CreateDirectory(elsewhere);
+		args.OutputPath = temp.Combine("link-to-elsewhere");
+		CreateDirectoryLinkOrSkip(args.OutputPath, elsewhere);
+
+		Assert.IsTrue(args.Validate(out Collection<string> errors), string.Join(", ", errors));
+	}
+
+	private static void CreateDirectoryLinkOrSkip(string link, string target)
+	{
+		try
+		{
+			Directory.CreateSymbolicLink(link, target);
+		}
+		catch (IOException e)
+		{
+			Assert.Inconclusive($"Directory symlinks can't be created here: {e.Message}");
+		}
+		catch (UnauthorizedAccessException e)
+		{
+			Assert.Inconclusive($"Directory symlinks can't be created here: {e.Message}");
+		}
+	}
+
+	[TestMethod]
 	public void ValidateRejectsEmptyPaths()
 	{
 		Arguments args = new();

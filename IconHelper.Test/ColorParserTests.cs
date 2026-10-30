@@ -84,6 +84,33 @@ public class ColorParserTests
 		// The keys are stored lower case, and lookup is case insensitive.
 		Assert.Contains("white", ColorParser.KnownNames);
 		Assert.Contains("black", ColorParser.KnownNames);
-		Assert.Contains("transparent", ColorParser.KnownNames);
+	}
+
+	[TestMethod]
+	public void KnownNamesLeaveOutTransparent()
+	{
+		// TryParse rejects it, so listing it would offer a name that validation then refuses.
+		Assert.DoesNotContain("transparent", ColorParser.KnownNames);
+	}
+
+	[TestMethod]
+	[DataRow("transparent")]
+	[DataRow("Transparent")]
+	[DataRow("#FF880000")]
+	[DataRow("00000000")]
+	public void RejectsFullyTransparentColors(string value)
+	{
+		// The output alpha is the coverage and the colour's own alpha is ignored, so a transparent
+		// colour would paint the icon opaque in its RGB: solid black for "transparent".
+		Assert.IsFalse(ColorParser.TryParse(value, out _), $"'{value}' should be rejected.");
+		Assert.IsTrue(ColorParser.IsFullyTransparent(value), $"'{value}' should be reported as fully transparent.");
+	}
+
+	[TestMethod]
+	public void AcceptsAColorThatIsOnlyPartlyTransparent()
+	{
+		Assert.IsTrue(ColorParser.TryParse("#FF880001", out _));
+		Assert.IsFalse(ColorParser.IsFullyTransparent("#FF880001"));
+		Assert.IsFalse(ColorParser.IsFullyTransparent("not-a-color"));
 	}
 }

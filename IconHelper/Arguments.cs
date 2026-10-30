@@ -77,7 +77,11 @@ internal sealed class Arguments
 			errors.Add($"--output must not be the --input directory, or the source icons are overwritten: {(string)output!}");
 		}
 
-		if (!ColorParser.TryParse(Color, out _))
+		if (ColorParser.IsFullyTransparent(Color))
+		{
+			errors.Add($"'{Color}' is fully transparent. The output alpha is the icon's coverage, so the color's own alpha is ignored and a transparent color would paint the icon opaque in its RGB instead. Give an opaque color.");
+		}
+		else if (!ColorParser.TryParse(Color, out _))
 		{
 			errors.Add($"'{Color}' is not a color. Use a hex value such as #RRGGBB, #RGB or #RRGGBBAA, or one of: {ColorParser.KnownNames}.");
 		}

@@ -274,6 +274,22 @@ public class ArgumentsTests
 	}
 
 	[TestMethod]
+	[DataRow("transparent")]
+	[DataRow("#FF880000")]
+	public void ValidateRejectsAFullyTransparentColor(string color)
+	{
+		using TempDirectory temp = new();
+		Arguments args = ValidArguments(temp);
+		args.Color = color;
+
+		bool valid = args.Validate(out Collection<string> errors);
+
+		Assert.IsFalse(valid);
+		Assert.HasCount(1, errors);
+		Assert.Contains("is fully transparent", errors[0]);
+	}
+
+	[TestMethod]
 	public void ValidateReportsEveryProblemAtOnce()
 	{
 		using TempDirectory temp = new();

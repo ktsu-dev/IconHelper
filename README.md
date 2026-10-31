@@ -284,7 +284,7 @@ already contains its own output will not reprocess those files.
 | Code | Meaning |
 |------|---------|
 | `0` | Every file was processed successfully. Also returned for `--help` and `--version` |
-| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an unrecognised `--color`, or `padding * 2 >= size` |
+| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an `--output` directory that cannot be created or written to, an unrecognised `--color`, or `padding * 2 >= size` |
 | `2` | The batch ran to completion but at least one file could not be processed |
 
 Code `2` means the run finished and the remaining icons were still written. Check the summary line

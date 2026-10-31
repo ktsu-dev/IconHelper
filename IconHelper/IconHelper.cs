@@ -89,7 +89,7 @@ internal static class IconHelper
 		catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
 		{
 			// Validate can only check that the paths are well formed. Whether the output folder can be
-			// created, or the input folder listed, is known only on trying, and both happen before the
+			// created and written to, or the input folder listed, is known only on trying, and both happen before the
 			// per-file catch, so without this an unusable folder ended the run with a stack trace and
 			// exit 134. Each file's own failures never reach here: ProcessDirectory catches those.
 			Console.WriteLine($"Argument validation failed:\n\t{exception.Message}");
@@ -128,6 +128,7 @@ internal static class IconHelper
 		}
 
 		Directory.CreateDirectory(outputDirectory);
+		EnsureWritable(outputDirectory);
 
 		int processed = 0;
 		int failed = 0;
@@ -186,6 +187,20 @@ internal static class IconHelper
 		}
 
 		return new BatchResult(processed, failed);
+	}
+
+	/// <summary>
+	/// Throws the <see cref="IOException"/> or <see cref="UnauthorizedAccessException"/> that writing
+	/// an icon would, if the output folder cannot take a new file. CreateDirectory is a no-op on a
+	/// folder that already exists, so on its own it let a read-only one through, and every icon was
+	/// then decoded and processed only to fail at the save, exiting 2 as if the inputs were bad. The
+	/// probe is dot-named, so even a copy left behind by a crash is skipped as metadata.
+	/// </summary>
+	private static void EnsureWritable(AbsoluteDirectoryPath outputDirectory)
+	{
+		FileName probeName = FileName.Create<FileName>($".iconhelper-write-probe-{Guid.NewGuid():N}");
+		AbsoluteFilePath probePath = outputDirectory / probeName;
+		using FileStream probe = new(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize: 1, FileOptions.DeleteOnClose);
 	}
 
 	/// <summary>

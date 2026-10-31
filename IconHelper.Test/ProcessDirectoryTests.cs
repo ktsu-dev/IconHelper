@@ -229,6 +229,75 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void AnExistingReadOnlyOutputFolderExitsWithInvalidArgumentsAndWritesNothing()
+	{
+		// Mode bits are POSIX; Windows read-only folders are an attribute Explorer itself ignores.
+		if (OperatingSystem.IsWindows())
+		{
+			Assert.Inconclusive("Read-only folder modes are POSIX only.");
+			return;
+		}
+
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		Directory.CreateDirectory(output);
+		WritePng(Path.Join(input, "a.png"), 64);
+		WritePng(Path.Join(input, "b.png"), 64);
+
+		UnixFileMode original = File.GetUnixFileMode(output);
+		File.SetUnixFileMode(output, UnixFileMode.UserRead | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+		try
+		{
+			if (CanCreateAFileIn(output))
+			{
+				// Root, and some container file systems, ignore mode bits, so there is nothing to test.
+				Assert.Inconclusive("This process can write to a mode 555 folder, so the folder is not read-only to it.");
+			}
+
+			Assert.AreEqual(IconHelper.ExitInvalidArguments, IconHelper.Execute(ArgumentsFor(input, output)));
+			Assert.IsEmpty(Directory.GetFileSystemEntries(output), "Nothing should be written, the write probe included.");
+		}
+		finally
+		{
+			File.SetUnixFileMode(output, original);
+		}
+	}
+
+	[TestMethod]
+	public void LeavesNoWriteProbeBehindInAWritableOutputFolder()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		WritePng(Path.Join(input, "icon.png"), 64);
+
+		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.Execute(ArgumentsFor(input, output)));
+		CollectionAssert.AreEqual(new[] { Path.Join(output, "icon.png") }, Directory.GetFileSystemEntries(output));
+	}
+
+	private static bool CanCreateAFileIn(string directory)
+	{
+		string probe = Path.Join(directory, $"probe-{Guid.NewGuid():N}");
+		try
+		{
+			File.WriteAllBytes(probe, []);
+			File.Delete(probe);
+			return true;
+		}
+		catch (UnauthorizedAccessException)
+		{
+			return false;
+		}
+		catch (IOException)
+		{
+			return false;
+		}
+	}
+
+	[TestMethod]
 	public void ExecuteReportsInvalidArgumentsForAMissingInput()
 	{
 		using TempDirectory temp = new();

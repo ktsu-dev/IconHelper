@@ -149,9 +149,11 @@ help text and exited 0.
 
 `Run` is a one-line `Environment.Exit` wrapper around `Execute(Arguments)`, which returns the exit code so a
 whole run is testable. `Execute` also turns an `IOException` or `UnauthorizedAccessException` from
-`ProcessDirectory` into exit 1. Only the up-front `Directory.CreateDirectory` and `Directory.GetFiles`
-can raise one, since each file's own failures are caught inside the batch, and a folder that cannot be
-created or listed used to end the run with a stack trace and exit 134.
+`ProcessDirectory` into exit 1. Only the up-front `Directory.CreateDirectory`, the `EnsureWritable` probe
+and `Directory.GetFiles` can raise one, since each file's own failures are caught inside the batch, and
+a folder that cannot be created or listed used to end the run with a stack trace and exit 134. The probe
+writes and deletes a dot-named temp file, because `CreateDirectory` is a no-op on an existing folder:
+without it a read-only output folder failed every icon one by one and exited 2.
 
 ### Known Rough Edges
 

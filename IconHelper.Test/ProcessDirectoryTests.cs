@@ -188,6 +188,37 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void TreatsFindersCustomFolderIconFileAsMetadata()
+	{
+		Assert.IsTrue(IconHelper.IsFileManagerMetadata("Icon\r"), "Finder's custom folder icon file is metadata, not an icon.");
+		Assert.IsFalse(IconHelper.IsFileManagerMetadata("Icon"), "Only the CR-suffixed name is Finder's; a plain Icon file is still an input.");
+		Assert.IsFalse(IconHelper.IsFileManagerMetadata("icon\r"), "Finder always writes the name with a capital I.");
+	}
+
+	[TestMethod]
+	public void SkipsFindersCustomFolderIconFileWithoutCountingItAsFailed()
+	{
+		// Windows can't create a file name containing a carriage return, and a folder that held one
+		// would not reach the tool there anyway, so the batch-level check runs on Linux and macOS.
+		if (OperatingSystem.IsWindows())
+		{
+			Assert.Inconclusive("Windows cannot create a file named \"Icon\\r\".");
+		}
+
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		File.WriteAllBytes(Path.Join(input, "Icon\r"), []);
+		WritePng(Path.Join(input, "star.png"), 64);
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(new BatchResult(1, 0), result, "Finder's Icon\\r file should be neither written nor failed.");
+		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(result));
+	}
+
+	[TestMethod]
 	public void ReportsAndSkipsAFileThatCannotBeOpened()
 	{
 		// A locked file fails with an IOException rather than one of the ImageSharp decode

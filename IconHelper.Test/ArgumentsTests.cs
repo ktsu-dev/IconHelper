@@ -4,6 +4,9 @@ namespace ktsu.IconHelper.Test;
 
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
+
+using CommandLine;
 
 using ktsu.Semantics.Paths;
 
@@ -298,5 +301,90 @@ public class ArgumentsTests
 
 		Assert.IsTrue(args.TryResolveInput(out AbsoluteDirectoryPath? resolved, out string? error), error);
 		Assert.AreEqual(Directory.GetCurrentDirectory(), (string)resolved);
+	}
+
+	/// <summary>
+	/// Parses a command line the way <c>Main</c> does, so the tests see which tokens bind and which
+	/// are left over.
+	/// </summary>
+	private static Arguments Parse(params string[] commandLine)
+	{
+		using Parser parser = new(settings => settings.HelpWriter = null);
+		Arguments? parsed = null;
+		parser.ParseArguments<Arguments>(commandLine)
+			.WithParsed(a => parsed = a)
+			.WithNotParsed(e => Assert.Fail($"Expected the command line to parse, but got: {string.Join(", ", e.Select(x => x.Tag))}"));
+		return parsed!;
+	}
+
+	[TestMethod]
+	public void ValidateRejectsTheSecondHalfOfAnUnquotedOutputPath()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+		string output = temp.Combine("my");
+
+		Arguments args = Parse("-i", input, "-o", output, "icons", "-c", "red");
+
+		Assert.IsFalse(args.Validate(out Collection<string> errors));
+		Assert.HasCount(1, errors, string.Join(", ", errors));
+		Assert.Contains("icons", errors[0]);
+		Assert.Contains("Quote paths that contain spaces", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateRejectsASecondSize()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+
+		Arguments args = Parse("-i", input, "-o", temp.Combine("out"), "-s", "64", "32");
+
+		Assert.IsFalse(args.Validate(out Collection<string> errors));
+		Assert.HasCount(1, errors, string.Join(", ", errors));
+		Assert.Contains("32", errors[0]);
+	}
+
+	[TestMethod]
+	public void ValidateNamesEveryStrayArgument()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+
+		Arguments args = Parse("-i", input, "-o", temp.Combine("out"), "extra", "more");
+
+		Assert.IsFalse(args.Validate(out Collection<string> errors));
+		Assert.HasCount(1, errors, string.Join(", ", errors));
+		Assert.Contains("extra more", errors[0]);
+	}
+
+	[TestMethod]
+	public void ExecuteExitsOneForAStrayArgumentWithoutCreatingTheOutputFolder()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+		string output = temp.UncreatedSubdirectory("my");
+
+		Arguments args = Parse("-i", input, "-o", output, "icons");
+
+		Assert.AreEqual(IconHelper.ExitInvalidArguments, IconHelper.Execute(args));
+		Assert.IsFalse(Directory.Exists(output));
+	}
+
+	[TestMethod]
+	public void ParsedArgumentsWithNoStrayTokensStillValidate()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		Directory.CreateDirectory(input);
+
+		Arguments args = Parse("-i", input, "-o", temp.Combine("out"), "-s", "64");
+
+		Assert.IsTrue(args.Validate(out Collection<string> errors), string.Join(", ", errors));
+		Assert.IsEmpty(args.Unbound);
 	}
 }

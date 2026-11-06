@@ -2,6 +2,7 @@
 
 namespace ktsu.IconHelper;
 
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -27,9 +28,23 @@ internal sealed class Arguments
 	[Option('p', "padding", Required = false, HelpText = "The number of pixels per side to pad the output image. Must be less than half the size, leaving at least one pixel of content, and is clamped further on artwork that downscales to less than size. Will not change the output size. Defaults to 0.")]
 	public int Padding { get; set; } = 0;
 
+	/// <summary>
+	/// Every token that no option binds. CommandLineParser drops such tokens without an error, so an
+	/// unquoted path with a space (<c>-o my icons</c>) would write to <c>./my</c> and exit 0.
+	/// Binding them here lets <see cref="Validate"/> reject them instead.
+	/// </summary>
+	[Value(0, Hidden = true)]
+	public IEnumerable<string> Unbound { get; set; } = [];
+
 	internal bool Validate(out Collection<string> errors)
 	{
 		errors = [];
+
+		string[] unbound = [.. Unbound];
+		if (unbound.Length > 0)
+		{
+			errors.Add($"Unexpected argument(s): {string.Join(' ', unbound)}. Quote paths that contain spaces.");
+		}
 
 		if (Size <= 0)
 		{

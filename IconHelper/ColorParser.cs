@@ -11,6 +11,8 @@ using Color = ktsu.Semantics.Color.Color;
 /// </summary>
 internal static class ColorParser
 {
+	private const string CssGreen = "#008000";
+
 	/// <summary>
 	/// Accepts a name from <see cref="NamedColors"/>, case insensitively, or a hex string in
 	/// <c>#RGB</c>, <c>#RRGGBB</c> or <c>#RRGGBBAA</c> form. The leading <c>#</c> is optional.
@@ -26,6 +28,16 @@ internal static class ColorParser
 		}
 
 		string trimmed = value.Trim();
+
+		if (string.Equals(trimmed, "green", StringComparison.OrdinalIgnoreCase))
+		{
+			// ktsu.Semantics.Color 5.x defines NamedColors.Green as #00FF00, which CSS calls lime.
+			// Before #69 this option was parsed by ColorTranslator, whose green is #008000, so keep
+			// that value rather than silently repainting existing `-c green` pipelines. Semantics 6
+			// fixes the table upstream (ktsu-dev/Semantics#449); this can go once it is on NuGet.
+			color = Color.FromHex(CssGreen);
+			return true;
+		}
 
 		if (NamedColors.TryGet(trimmed, out color))
 		{

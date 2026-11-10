@@ -48,6 +48,33 @@ public class ColorParserTests
 	}
 
 	[TestMethod]
+	[DataRow("black", (byte)0, (byte)0, (byte)0, (byte)255)]
+	[DataRow("white", (byte)255, (byte)255, (byte)255, (byte)255)]
+	[DataRow("red", (byte)255, (byte)0, (byte)0, (byte)255)]
+	[DataRow("green", (byte)0, (byte)128, (byte)0, (byte)255)]
+	[DataRow("blue", (byte)0, (byte)0, (byte)255, (byte)255)]
+	[DataRow("yellow", (byte)255, (byte)255, (byte)0, (byte)255)]
+	[DataRow("cyan", (byte)0, (byte)255, (byte)255, (byte)255)]
+	[DataRow("magenta", (byte)255, (byte)0, (byte)255, (byte)255)]
+	[DataRow("gray", (byte)128, (byte)128, (byte)128, (byte)255)]
+	[DataRow("grey", (byte)128, (byte)128, (byte)128, (byte)255)]
+	[DataRow("orange", (byte)255, (byte)165, (byte)0, (byte)255)]
+	[DataRow("purple", (byte)128, (byte)0, (byte)128, (byte)255)]
+	public void EachKnownNameKeepsTheColourItPaintedBeforeTheNamedColorsSwitch(string name, byte r, byte g, byte b, byte a)
+	{
+		// These are the values System.Drawing.ColorTranslator gave each name before #69. Pinning every
+		// name means a change to the upstream NamedColors table can't silently repaint existing
+		// `-c <name>` pipelines, as ktsu.Semantics.Color 5.x did by making green #00FF00 (CSS lime).
+		Assert.AreEqual<(byte, byte, byte, byte)>((r, g, b, a), Parse(name));
+	}
+
+	[TestMethod]
+	public void ParsesTransparentAsFullyTransparent()
+	{
+		Assert.AreEqual(0, Parse("transparent").A);
+	}
+
+	[TestMethod]
 	public void IgnoresSurroundingWhitespace()
 	{
 		Assert.AreEqual<(byte, byte, byte, byte)>((0, 255, 0, 255), Parse("  #00FF00  "));

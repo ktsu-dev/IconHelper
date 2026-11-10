@@ -135,6 +135,12 @@ Paths and colours are semantic types rather than strings.
 The named colour set is 13 entries, where `System.Drawing.ColorTranslator` understood roughly 140 CSS
 names. That narrowing is deliberate and pinned by `ColorParserTests.RejectsCssNamesOutsideTheKnownSet`.
 
+Every name keeps the colour `ColorTranslator` gave it, pinned per name by
+`ColorParserTests.EachKnownNameKeepsTheColourItPaintedBeforeTheNamedColorsSwitch`. `green` is the one
+exception in `ktsu.Semantics.Color` 5.x, whose `NamedColors.Green` is `#00FF00` (CSS `lime`), so
+`ColorParser` maps it to `#008000` itself. Drop that special case once Semantics 6, which fixes the
+table upstream, is on NuGet.
+
 ### Exit codes
 
 `ExitSuccess` (0), `ExitInvalidArguments` (1) and `ExitSomeFilesFailed` (2) are constants on

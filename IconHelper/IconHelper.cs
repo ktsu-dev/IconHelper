@@ -136,7 +136,13 @@ internal static class IconHelper
 		// share a base name (save.png, save.bmp) map to one file, and writing both would leave only
 		// the last while counting two.
 		Dictionary<string, string> written = new(StringComparer.FromComparison(Arguments.PathComparison));
-		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(inputDirectory, "*").ToCollection();
+
+		// Directory.GetFiles returns whatever order the file system keeps: alphabetical on NTFS, hash
+		// order on ext4. "First" decides which of two colliding inputs is kept, so sort by ordinal
+		// name to make the same folder produce the same icons on every machine.
+		System.Collections.ObjectModel.Collection<string> files = Directory.GetFiles(inputDirectory, "*")
+			.Order(StringComparer.Ordinal)
+			.ToCollection();
 		foreach (string? file in files)
 		{
 			// The name, not the path. Directory.GetFiles hands back full paths, so testing the

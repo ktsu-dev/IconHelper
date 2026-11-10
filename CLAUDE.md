@@ -194,6 +194,13 @@ Each is covered by regression tests. Do not reintroduce them.
   `ProcessDirectoryTests.InputsSharingABaseNameDoNotOverwriteEachOther` and
   `ArgumentsTests.ValidateRejectsAnOutputThatIsTheInputDirectory`.
 
+- **Which colliding input was kept depended on the file system.** "First" meant `Directory.GetFiles`
+  order, which is hash order on ext4 and alphabetical on NTFS, so one folder gave different icons on
+  Linux and Windows and the winning extension changed from one base name to the next.
+  `ProcessDirectory` now sorts the inputs with `StringComparer.Ordinal` before the loop, so the input
+  whose name sorts first wins (`save.bmp` over `save.png`) and the `Processing …` lines come out in the
+  same order everywhere. Pinned by `ProcessDirectoryTests.InputsSharingABaseNameKeepTheOrdinallyFirstInput`.
+
 ## Testing
 
 `IconHelper.Test` is an MSTest project (`MSTest.Sdk`, Microsoft Testing Platform). Both it and the

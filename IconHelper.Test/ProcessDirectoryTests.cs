@@ -94,6 +94,40 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void InputsSharingABaseNameKeepTheOrdinallyFirstInput()
+	{
+		// Directory.GetFiles order is up to the file system (hash order on ext4, alphabetical on
+		// NTFS), so the kept input changed from one base name to the next and from one OS to the
+		// other. Ordinal order puts .bmp before .png, so the .bmp must win every collision. Several
+		// names are used because a single pair can come back in ordinal order by luck.
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+
+		string[] names = ["save", "home", "logo", "star", "gear", "user", "bell"];
+		foreach (string name in names)
+		{
+			// The .png is a filled square, which trims to a canvas filled edge to edge. The .bmp is a
+			// wide bar, which squares to a canvas with transparent rows above and below it.
+			WritePng(Path.Join(input, $"{name}.png"), 64);
+			using Image<Rgba32> bitmap = TestImages.Blank(64, 64);
+			TestImages.FillRect(bitmap, 0, 28, 64, 8, new Rgba32(255, 255, 255, 255));
+			bitmap.SaveAsBmp(Path.Join(input, $"{name}.bmp"));
+		}
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(names.Length, result.Written);
+		Assert.AreEqual(names.Length, result.Failed);
+		foreach (string name in names)
+		{
+			using Image<Rgba32> written = Image.Load<Rgba32>(Path.Join(output, $"{name}.png"));
+			Assert.AreEqual(0, written[written.Width / 2, 0].A, $"{name}.png should come from {name}.bmp, which sorts before {name}.png.");
+		}
+	}
+
+	[TestMethod]
 	public void SkipsFilesAlreadyMarkedAsGenerated()
 	{
 		using TempDirectory temp = new();

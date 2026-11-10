@@ -295,7 +295,7 @@ for how many succeeded.
 - Output is always PNG, and the extension is rewritten to match, so `logo.jpg` becomes `logo.png`. If
   the input directory holds two files with the same base name but different extensions, the one whose
   file name sorts first by ordinal comparison is written and the other is reported as failed, so the run
-  exits `2`. `save.bmp` wins over `save.png`, and `Save.png` over `save.bmp`, on every platform. Rename
+  exits `2`. `save.bmp` wins over `save.png` on every platform. Rename
   one of them.
 - `--output` must not be the `--input` directory, because the outputs would replace the `.png`
   sources. That is rejected with exit code `1`.

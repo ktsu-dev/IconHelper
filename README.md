@@ -218,6 +218,10 @@ Two details are load bearing:
   solid black silhouette carrying its shape entirely in the alpha channel. Those pixels are forced
   to full intensity, because normalizing them would resolve to intensity 0, which now collapses the
   alpha to 0 and the icon would come out fully transparent.
+- **True black is never lifted.** The offset applies to every lit pixel, but a pixel that flattened
+  to pure black keeps intensity 0. Otherwise dim artwork on an opaque black background, such as any
+  JPEG, would raise the whole background to `255 - maxValue` and come out as a translucent square
+  that is never cropped.
 - **The colour is painted flat everywhere, transparent pixels included.** Whatever RGB the decoder
   left behind, and equally a zeroed one, gives the resize in stage 5 a different colour to blend
   inward at the edges, which is what produces a dark or off-colour halo. A uniform colour field
@@ -304,8 +308,8 @@ for how many succeeded.
 - Colour information in the source is discarded, so every icon becomes a single flat colour.
 - Source brightness becomes transparency rather than a darker colour. A region that flattens to
   black is fully transparent in the output and falls outside the crop, instead of appearing as an
-  opaque black patch. Artwork whose brightest pixel is dim therefore produces a mask that is
-  translucent throughout, since the normalization has only that pixel to scale against.
+  opaque black patch. That holds whatever the brightness of the artwork: dim artwork is lifted to
+  full coverage, and the black around it stays transparent.
 - Every failure is reported and skipped, so the run always continues to the end and exits with
   code `2` if anything failed.
 

@@ -335,6 +335,17 @@ internal static class IconHelper
 		// brightest opaque pixel to exactly 255 while preserving the absolute differences between
 		// tones, so anti-aliased edges keep their gradient instead of being stretched apart. A
 		// source whose brightest pixel is already 255 passes through unchanged.
+		//
+		// True black is pinned to 0 before the offset is applied. A region that flattens to black is
+		// unlit and must stay fully transparent, so it falls outside the crop. Without the pin, dim
+		// artwork on an opaque black background (any JPEG, for instance) would lift that background to
+		// 255 - maxValue and come out as a translucent square that is never trimmed. Near-black
+		// anti-aliasing still carries the offset, so edge gradients are preserved.
+		if (pixel.R == 0)
+		{
+			return 0;
+		}
+
 		return (byte)(255 - (maxValue - pixel.R));
 	}
 

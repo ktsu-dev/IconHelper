@@ -245,6 +245,38 @@ public class ProcessImageTests
 	}
 
 	[TestMethod]
+	public void DropsAnOpaqueBlackBackgroundBehindDimArtwork()
+	{
+		// Dim artwork leaves maxValue below 255, so the offset lifts every lit pixel. True black must
+		// not be lifted with it: the background stays fully transparent and falls outside the crop (#121).
+		using Image<Rgba32> image = new(80, 80, OpaqueBlack);
+		TestImages.FillRect(image, 20, 20, 40, 40, new Rgba32(80, 80, 80, 255));
+
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 255, 0), 512, 0);
+
+		Assert.AreEqual(40, image.Width, "The crop should trim the black background to the artwork.");
+		Assert.AreEqual(40, image.Height);
+		Assert.AreEqual(255, image[20, 20].A, "The dim artwork is normalized up to full coverage.");
+	}
+
+	[TestMethod]
+	public void LeavesAnOpaqueBlackBackgroundTransparentBehindDimArtwork()
+	{
+		// The same scene with the canvas held square by artwork in two corners, so the background
+		// survives the crop and its alpha can be read directly.
+		using Image<Rgba32> image = new(80, 80, OpaqueBlack);
+		TestImages.FillRect(image, 0, 0, 10, 10, new Rgba32(80, 80, 80, 255));
+		TestImages.FillRect(image, 70, 70, 10, 10, new Rgba32(80, 80, 80, 255));
+
+		IconHelper.ProcessImage(image, Color.FromBytes(0, 255, 0), 512, 0);
+
+		Assert.AreEqual(80, image.Width);
+		Assert.AreEqual(0, image[40, 40].A, "Black between the artwork must be fully transparent.");
+		Assert.AreEqual(0, image[79, 0].A, "A black corner must be fully transparent.");
+		Assert.AreEqual(255, image[5, 5].A);
+	}
+
+	[TestMethod]
 	public void PaintsEveryPixelTheFlatTargetColour()
 	{
 		// Nothing in the output may modulate the colour channels: whatever the source tones were,

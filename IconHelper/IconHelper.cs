@@ -170,7 +170,7 @@ internal static class IconHelper
 				FileName outputFileName = FileName.Create<FileName>(outputName);
 				AbsoluteFilePath outputFilePath = outputDirectory / outputFileName;
 
-				image.SaveAsPng(outputFilePath, Encoder);
+				WriteReplacing(outputFilePath, stream => image.SaveAsPng(stream, Encoder));
 				written.Add(outputName, file);
 				processed++;
 			}
@@ -186,6 +186,37 @@ internal static class IconHelper
 		}
 
 		return new BatchResult(processed, failed);
+	}
+
+	/// <summary>
+	/// Writes <paramref name="outputFilePath"/> through a temporary file beside it, then moves that
+	/// file over the destination. A save that fails part-way, for example on a full disk, leaves no
+	/// partial file under the output name and keeps the output an earlier run wrote there.
+	/// </summary>
+	/// <remarks>
+	/// The temporary file is not a .png, and Validate rejects an output folder that is the input
+	/// folder, so a file left behind by a crash is never picked up as an input.
+	/// </remarks>
+	internal static void WriteReplacing(string outputFilePath, Action<Stream> write)
+	{
+		Ensure.NotNull(outputFilePath);
+		Ensure.NotNull(write);
+
+		string temporaryPath = $"{outputFilePath}.{Path.GetRandomFileName()}.tmp";
+		try
+		{
+			using (FileStream stream = new(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+			{
+				write(stream);
+			}
+
+			File.Move(temporaryPath, outputFilePath, overwrite: true);
+		}
+		catch
+		{
+			File.Delete(temporaryPath);
+			throw;
+		}
 	}
 
 	/// <summary>

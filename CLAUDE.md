@@ -194,6 +194,12 @@ Each is covered by regression tests. Do not reintroduce them.
   `ProcessDirectoryTests.InputsSharingABaseNameDoNotOverwriteEachOther` and
   `ArgumentsTests.ValidateRejectsAnOutputThatIsTheInputDirectory`.
 
+- **A failed save destroyed the earlier output.** `SaveAsPng(path)` truncates the destination before
+  encoding, so a save that failed part-way (a full disk, say) left a truncated or 0-byte PNG under
+  the output name, replacing the good icon from an earlier run. `WriteReplacing` now encodes to a
+  `<name>.png.<random>.tmp` file beside the output and moves it into place, and deletes it on
+  failure. Pinned by `ProcessDirectoryTests.ASaveThatFailsPartWayLeavesTheEarlierOutputUntouched`.
+
 ## Testing
 
 `IconHelper.Test` is an MSTest project (`MSTest.Sdk`, Microsoft Testing Platform). Both it and the

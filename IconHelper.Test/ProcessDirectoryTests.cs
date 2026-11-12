@@ -420,4 +420,57 @@ public class ProcessDirectoryTests
 		Assert.AreEqual(1, result.Written);
 		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(result));
 	}
+
+	[TestMethod]
+	public void ASaveThatFailsPartWayLeavesTheEarlierOutputUntouched()
+	{
+		using TempDirectory temp = new();
+		string output = temp.Combine("icon.png");
+		byte[] earlier = [1, 2, 3, 4, 5];
+		File.WriteAllBytes(output, earlier);
+
+		Assert.ThrowsExactly<IOException>(() => IconHelper.WriteReplacing(output, stream =>
+		{
+			stream.Write(new byte[4096]);
+			stream.Flush();
+			throw new IOException("No space left on device");
+		}));
+
+		CollectionAssert.AreEqual(earlier, File.ReadAllBytes(output), "A failed save must not truncate the earlier output.");
+		CollectionAssert.AreEqual(new[] { output }, Directory.GetFiles(temp.FullPath), "A failed save must leave no partial or temporary file behind.");
+	}
+
+	[TestMethod]
+	public void ASaveThatFailsPartWayLeavesNothingWhenThereWasNoEarlierOutput()
+	{
+		using TempDirectory temp = new();
+		string output = temp.Combine("icon.png");
+
+		Assert.ThrowsExactly<IOException>(() => IconHelper.WriteReplacing(output, stream =>
+		{
+			stream.Write(new byte[4096]);
+			throw new IOException("No space left on device");
+		}));
+
+		Assert.IsEmpty(Directory.GetFiles(temp.FullPath), "A failed save must leave no partial file under the output name.");
+	}
+
+	[TestMethod]
+	public void ARerunReplacesTheEarlierOutputAndLeavesNoTemporaryFiles()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("in");
+		string output = temp.Combine("out");
+		Directory.CreateDirectory(input);
+		Directory.CreateDirectory(output);
+		WritePng(Path.Combine(input, "icon.png"), 64);
+		File.WriteAllBytes(Path.Combine(output, "icon.png"), [1, 2, 3]);
+
+		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
+
+		Assert.AreEqual(1, result.Written);
+		CollectionAssert.AreEqual(new[] { Path.Combine(output, "icon.png") }, Directory.GetFiles(output));
+		using Image<Rgba32> written = Image.Load<Rgba32>(Path.Combine(output, "icon.png"));
+		Assert.AreEqual(32, written.Width);
+	}
 }

@@ -463,14 +463,14 @@ public class ProcessDirectoryTests
 		string output = temp.Combine("out");
 		Directory.CreateDirectory(input);
 		Directory.CreateDirectory(output);
-		WritePng(Path.Combine(input, "icon.png"), 64);
-		File.WriteAllBytes(Path.Combine(output, "icon.png"), [1, 2, 3]);
+		WritePng(Path.Join(input, "icon.png"), 64);
+		File.WriteAllBytes(Path.Join(output, "icon.png"), [1, 2, 3]);
 
 		BatchResult result = IconHelper.ProcessDirectory(ArgumentsFor(input, output), NamedColors.White);
 
 		Assert.AreEqual(1, result.Written);
-		CollectionAssert.AreEqual(new[] { Path.Combine(output, "icon.png") }, Directory.GetFiles(output));
-		using Image<Rgba32> written = Image.Load<Rgba32>(Path.Combine(output, "icon.png"));
+		CollectionAssert.AreEqual(new[] { Path.Join(output, "icon.png") }, Directory.GetFiles(output));
+		using Image<Rgba32> written = Image.Load<Rgba32>(Path.Join(output, "icon.png"));
 		Assert.AreEqual(32, written.Width);
 	}
 }

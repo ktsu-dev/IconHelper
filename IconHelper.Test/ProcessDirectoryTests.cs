@@ -250,6 +250,40 @@ public class ProcessDirectoryTests
 	}
 
 	[TestMethod]
+	public void AnInputWhoseImagesAllSitInSubfoldersExitsNonZeroAndNamesThem()
+	{
+		using TempDirectory temp = new();
+		string input = temp.Combine("icons");
+		Directory.CreateDirectory(Path.Join(input, "ui"));
+		Directory.CreateDirectory(Path.Join(input, "actions"));
+		WritePng(Path.Join(input, "ui", "art64.png"), 64);
+		WritePng(Path.Join(input, "actions", "save.png"), 64);
+
+		string output = temp.Combine("out");
+
+		Assert.AreEqual(
+			IconHelper.ExitInvalidArguments,
+			IconHelper.Execute(ArgumentsFor(input, output)),
+			"A run that found nothing to process must not report success.");
+		Assert.IsEmpty(Directory.GetFiles(output));
+
+		// Console output is not captured here: tests run in parallel and share Console.Out.
+		StringAssert.Contains(IconHelper.DescribeEmptyInput(input), "Skipped subfolders: actions, ui.");
+	}
+
+	[TestMethod]
+	public void DescribeEmptyInputSaysOnlyTheTopLevelIsReadWhenThereAreNoSubfolders()
+	{
+		using TempDirectory temp = new();
+		Directory.CreateDirectory(Path.Join(temp.FullPath, ".git"));
+
+		string message = IconHelper.DescribeEmptyInput(temp.FullPath);
+
+		StringAssert.Contains(message, "Only the top level of the input folder is read.");
+		Assert.DoesNotContain("Skipped subfolders", message);
+	}
+
+	[TestMethod]
 	public void ExitCodeIsSuccessWhenNothingFailed()
 	{
 		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(new BatchResult(4, 0)));
@@ -258,7 +292,8 @@ public class ProcessDirectoryTests
 	[TestMethod]
 	public void ExitCodeIsSuccessForAnEmptyRun()
 	{
-		// Nothing to do is not a failure.
+		// ExitCodeFor only maps a batch that ran. Execute reports an input with nothing to process
+		// before it gets here, see AnInputWhoseImagesAllSitInSubfoldersExitsNonZeroAndNamesThem.
 		Assert.AreEqual(IconHelper.ExitSuccess, IconHelper.ExitCodeFor(new BatchResult(0, 0)));
 	}
 

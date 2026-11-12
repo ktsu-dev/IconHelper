@@ -26,7 +26,7 @@ It is built on [SixLabors.ImageSharp](https://github.com/SixLabors/ImageSharp), 
 
 ## Features
 
-- **Batch Processing**: Processes every file in an input directory in a single run
+- **Batch Processing**: Processes every file at the top level of an input directory in a single run
 - **Coverage Output**: Flattens each image to a mask painted in one flat colour, with the shape carried entirely by the alpha channel
 - **Automatic Trimming**: Detects the bounding box of the pixels that end up visible and crops to it
 - **Square Centring**: Pads the trimmed artwork to a square canvas so icons align consistently
@@ -284,7 +284,7 @@ already contains its own output will not reprocess those files.
 | Code | Meaning |
 |------|---------|
 | `0` | Every file was processed successfully. Also returned for `--help` and `--version` |
-| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an unrecognised `--color`, or `padding * 2 >= size` |
+| `1` | The arguments were unusable, for example an `--input` directory that does not exist, an unrecognised `--color`, or `padding * 2 >= size`. Also returned when `--input` holds nothing to process |
 | `2` | The batch ran to completion but at least one file could not be processed |
 
 Code `2` means the run finished and the remaining icons were still written. Check the summary line
@@ -295,6 +295,9 @@ for how many succeeded.
 - Output is always PNG, and the extension is rewritten to match, so `logo.jpg` becomes `logo.png`. If
   the input directory holds two files with the same base name but different extensions, the first one
   processed is written and the other is reported as failed, so the run exits `2`. Rename one of them.
+- Only the top level of `--input` is read, and subfolders are not searched. If that finds nothing
+  to process, the run prints a warning that names the subfolders it skipped and exits `1`, so an
+  `--input` pointed one level too high (`icons/` above `icons/ui/*.png`) is not mistaken for success.
 - `--output` must not be the `--input` directory, because the outputs would replace the `.png`
   sources. That is rejected with exit code `1`.
 - Input formats are whatever ImageSharp can decode (PNG, JPEG, BMP, GIF, TGA, TIFF, WebP, PBM, QOI).

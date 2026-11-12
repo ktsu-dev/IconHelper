@@ -96,11 +96,39 @@ internal static class IconHelper
 			return ExitInvalidArguments;
 		}
 
+		if (result.Written == 0 && result.Failed == 0)
+		{
+			// Only the top level of the input folder is read. An --input one level too high, such as
+			// icons/ above icons/ui/*.png, used to print "Done. 0 file(s) written." and exit 0, which
+			// a build script reads as success.
+			_ = args.TryResolveInput(out AbsoluteDirectoryPath? inputDirectory, out _);
+			Console.WriteLine(DescribeEmptyInput(inputDirectory!));
+			return ExitInvalidArguments;
+		}
+
 		Console.WriteLine(result.Failed == 0
 			? $"Done. {result.Written} file(s) written."
 			: $"Done. {result.Written} file(s) written, {result.Failed} failed.");
 
 		return ExitCodeFor(result);
+	}
+
+	/// <summary>
+	/// Explains a run that found nothing to process, naming the subfolders it did not look in, since
+	/// only the top level of the input folder is read.
+	/// </summary>
+	internal static string DescribeEmptyInput(string inputDirectory)
+	{
+		string[] subfolders = [.. Directory.GetDirectories(inputDirectory)
+			.Select(Path.GetFileName)
+			.OfType<string>()
+			.Where(name => !name.StartsWith('.'))
+			.Order(StringComparer.Ordinal)];
+
+		string message = $"Warning: no files to process in {inputDirectory}. Only the top level of the input folder is read.";
+		return subfolders.Length == 0
+			? message
+			: $"{message} Skipped subfolders: {string.Join(", ", subfolders)}.";
 	}
 
 	/// <summary>

@@ -141,6 +141,13 @@ names. That narrowing is deliberate and pinned by `ColorParserTests.RejectsCssNa
 `IconHelper`. Two pure helpers decide them so the logic is testable without spawning a process:
 
 - `ExitCodeFor(BatchResult)` maps a finished batch, non-zero `Failed` gives 2
+
+`Execute` checks one case before `ExitCodeFor`. A batch that wrote nothing and failed nothing found
+nothing to process, because only the top level of the input folder is read. It prints
+`DescribeEmptyInput`'s warning, which names the skipped subfolders, and returns 1. Before this, an
+`--input` one level too high printed "Done. 0 file(s) written." and exited 0. Pinned by
+`ProcessDirectoryTests.AnInputWhoseImagesAllSitInSubfoldersExitsNonZeroAndNamesThem`.
+
 - `ExitCodeForParseErrors(IEnumerable<ErrorType>)` maps CommandLineParser failures. `--help` and
   `--version` arrive here as errors but must still exit 0, which is the case that helper exists for
 
